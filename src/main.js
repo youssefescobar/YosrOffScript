@@ -9,7 +9,6 @@
 import gsap from 'gsap';
 import { Observer } from 'gsap/Observer';
 import PROJECTS from './projects.js';
-import { initSideRays } from './SideRays.js';
 
 gsap.registerPlugin(Observer);
 
@@ -417,16 +416,11 @@ function initKeyboard() {
 /* ===================================================
    5.  LOADER
    =================================================== */
-let destroySideRays = null;
-
 function playLoader() {
   // Pre-hide items for dramatic entrance
   gsap.set('.header__nav', { opacity: 0, y: -30 });
   gsap.set('.footer', { opacity: 0, y: 30 });
   gsap.set('.header__left', { opacity: 0 });
-  
-  // Start the lowkey gravitational rays background effect
-  destroySideRays = initSideRays('#side-rays');
 
   tiles.forEach(t => {
     t.animScale = 0;
@@ -439,13 +433,22 @@ function playLoader() {
     .to('.loader__tagline > span', { y: '0%', duration: 0.8 }, '-=0.5')
     .to('.loader__cta > span', { y: '0%', opacity: 1, duration: 0.8 }, '-=0.3');
 
+  // Any click/scroll clears the loader
+  Observer.create({
+    target: window,
+    type: 'pointer,wheel,touch',
+    onPress: dismiss,
+    onUp: dismiss,
+    onWheel: dismiss
+  });
+  
+  // Also dismiss if they click the CTA
+  document.querySelector('.loader__cta').addEventListener('click', dismiss);
+
   function dismiss() {
     if (loaderDone) return;
     loaderDone = true;
     
-    // Stop the background effect
-    if (destroySideRays) destroySideRays();
-
     // Activate viewport FIRST so layout is fully calculated for accurate FLIP measurements
     viewport.classList.add('is-active');
 
