@@ -164,15 +164,12 @@ img { display: block; max-width: 100%; }
   transform-style: preserve-3d;
   backface-visibility: hidden;
   transition: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .tile:active {
   cursor: grabbing;
-}
-
-.tile.is-hidden {
-  opacity: 0 !important;
-  pointer-events: none !important;
 }
 
 .tile__img {
@@ -200,7 +197,6 @@ img { display: block; max-width: 100%; }
   background: linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 60%);
   opacity: 0;
   transition: opacity 0.3s var(--ease-out-expo);
-  pointer-events: none;
 }
 
 .tile:hover .tile__overlay {
@@ -393,3 +389,72 @@ img { display: block; max-width: 100%; }
 }
 
 .about-panel__close:hover { color: var(--color-text); }
+
+/* ===================================================
+   PROJECT PANEL
+   =================================================== */
+.project-panel {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-about);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(20px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.5s var(--ease-out-expo), visibility 0.5s;
+}
+
+.project-panel.is-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.project-panel__close {
+  position: absolute;
+  top: var(--space-lg);
+  right: var(--space-lg);
+  font-size: 2rem;
+  color: var(--color-text-muted);
+  transition: color 0.3s;
+  line-height: 1;
+  z-index: 2;
+}
+
+.project-panel__close:hover { color: var(--color-text); }
+
+.project-panel__inner {
+  width: 100%;
+  max-width: 900px;
+  padding: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.project-panel__img {
+  max-height: 60vh;
+  max-width: 100%;
+  width: auto;
+  border-radius: var(--tile-radius);
+  margin-bottom: var(--space-lg);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+  object-fit: cover;
+}
+
+.project-panel__title {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 300;
+  margin-bottom: var(--space-xs);
+  letter-spacing: -0.02em;
+}
+
+.project-panel__category {
+  color: var(--color-text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+}

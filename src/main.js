@@ -19,6 +19,9 @@ const canvas      = document.getElementById('canvas');
 const tileCountEl = document.getElementById('tile-count');
 const aboutPanel  = document.getElementById('about-panel');
 const aboutClose  = document.getElementById('about-close');
+const projectPanel = document.getElementById('project-panel');
+const projectClose = document.getElementById('project-close');
+const projectInner = document.getElementById('project-inner');
 const header      = document.getElementById('header');
 
 /* ---------- State ---------- */
@@ -70,31 +73,18 @@ function buildGrid() {
 
   const avgTileW = 210;
   const avgTileH = 200;
-  const cols = Math.ceil(vw / (avgTileW + GAP)) + 3;
-  const rows = Math.ceil(vh / (avgTileH + GAP)) + 3;
+  const baseCols = Math.ceil(vw / (avgTileW + GAP)) + 3;
+  const baseRows = Math.ceil(vh / (avgTileH + GAP)) + 3;
 
   canvas.innerHTML = '';
   tiles = [];
 
-  const colWidths = [];
-  const rowHeights = [];
-  for (let c = 0; c < cols; c++) colWidths.push(TILE_SIZES[c % TILE_SIZES.length].w);
-  for (let r = 0; r < rows; r++) rowHeights.push(TILE_SIZES[r % TILE_SIZES.length].h);
-
-  const colX = [0];
-  for (let c = 1; c < cols; c++) colX.push(colX[c - 1] + colWidths[c - 1] + GAP);
-  const rowY = [0];
-  for (let r = 1; r < rows; r++) rowY.push(rowY[r - 1] + rowHeights[r - 1] + GAP);
-
-  worldW = colX[cols - 1] + colWidths[cols - 1] + GAP;
-  worldH = rowY[rows - 1] + rowHeights[rows - 1] + GAP;
-
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const idx = (r * cols + c) % PROJECTS.length;
+  for (let r = 0; r < baseRows; r++) {
+    for (let c = 0; c < baseCols; c++) {
+      const idx = (r * baseCols + c) % PROJECTS.length;
       const proj = PROJECTS[idx];
-      const w = colWidths[c];
-      const h = rowHeights[r];
+      const w = TILE_SIZES[c % TILE_SIZES.length].w;
+      const h = TILE_SIZES[r % TILE_SIZES.length].h;
 
       const el = document.createElement('div');
       el.className = 'tile';
@@ -115,11 +105,11 @@ function buildGrid() {
       tiles.push({
         el,
         project: proj,
-        baseX: colX[c],
-        baseY: rowY[r],
+        baseX: 0,
+        baseY: 0,
         w,
         h,
-        // Screen position (updated each frame)
+        animScale: 1, // Add for GSAP animations
         screenX: 0,
         screenY: 0,
       });
@@ -127,6 +117,90 @@ function buildGrid() {
   }
 
   tileCountEl.textContent = `${PROJECTS.length} Projects`;
+  layoutGrid(false);
+}
+
+/* ===================================================
+   1b. LAYOUT GRID
+   =================================================== */
+function layoutGrid(animate = false) {
+  const visibleTiles = tiles.filter(t => activeFilter === 'all' || t.project.category === activeFilter);
+  const hiddenTiles = tiles.filter(t => activeFilter !== 'all' && t.project.category !== activeFilter);
+
+  // Hide non-matching
+  hiddenTiles.forEach(t => {
+    t.el.style.pointerEvents = 'none'; // prevent clicks while fading out
+    if (animate) {
+      gsap.to(t, { animScale: 0, duration: 0.6, ease: 'power3.inOut' });
+      gsap.to(t.el, { opacity: 0, duration: 0.6, ease: 'power3.inOut' });
+    } else {
+      t.animScale = 0;
+      t.el.style.opacity = 0;
+    }
+  });
+
+  if (visibleTiles.length === 0) return;
+
+  const N = visibleTiles.length;
+  const aspect = window.innerWidth / window.innerHeight;
+  let cols = Math.ceil(Math.sqrt(N * aspect));
+  if (cols < 1) cols = 1;
+  const rows = Math.ceil(N / cols);
+
+  const colWidths = [];
+  const rowHeights = [];
+  for (let c = 0; c < cols; c++) colWidths.push(TILE_SIZES[c % TILE_SIZES.length].w);
+  for (let r = 0; r < rows; r++) rowHeights.push(TILE_SIZES[r % TILE_SIZES.length].h);
+
+  const colX = [0];
+  for (let c = 1; c < cols; c++) colX.push(colX[c - 1] + colWidths[c - 1] + GAP);
+  const rowY = [0];
+  for (let r = 1; r < rows; r++) rowY.push(rowY[r - 1] + rowHeights[r - 1] + GAP);
+
+  const contentW = colX[cols - 1] + colWidths[cols - 1] + GAP;
+  const contentH = rowY[rows - 1] + rowHeights[rows - 1] + GAP;
+
+  worldW = Math.max(contentW, window.innerWidth);
+  worldH = Math.max(contentH, window.innerHeight);
+
+  const offsetX = (worldW - contentW) / 2;
+  const offsetY = (worldH - contentH) / 2;
+
+  // Center the view on the new grid
+  if (animate) {
+    gsap.to(state, { targetX: 0, targetY: 0, duration: 1.0, ease: 'power3.inOut' });
+  } else {
+    state.targetX = 0;
+    state.targetY = 0;
+    state.currentX = 0;
+    state.currentY = 0;
+  }
+
+  visibleTiles.forEach((t, i) => {
+    t.el.style.pointerEvents = 'auto';
+    const r = Math.floor(i / cols);
+    const c = i % cols;
+    
+    const targetX = colX[c] + offsetX;
+    const targetY = rowY[r] + offsetY;
+    const targetW = colWidths[c];
+    const targetH = rowHeights[r];
+
+    t.w = targetW;
+    t.h = targetH;
+
+    if (animate) {
+      gsap.to(t, { baseX: targetX, baseY: targetY, animScale: 1, duration: 0.8, ease: 'power3.inOut' });
+      gsap.to(t.el, { width: targetW, height: targetH, opacity: 1, duration: 0.8, ease: 'power3.inOut' });
+    } else {
+      t.baseX = targetX;
+      t.baseY = targetY;
+      t.animScale = 1;
+      t.el.style.width = `${targetW}px`;
+      t.el.style.height = `${targetH}px`;
+      t.el.style.opacity = 1;
+    }
+  });
 }
 
 /* ===================================================
@@ -144,12 +218,6 @@ function startRenderLoop() {
     const hh = halfH();
 
     tiles.forEach((t) => {
-      if (t.el.classList.contains('is-hidden')) {
-        t.el.style.visibility = 'hidden';
-        return;
-      }
-      t.el.style.visibility = 'visible';
-
       // Toroidal wrapping
       let x = ((t.baseX + state.currentX) % worldW + worldW) % worldW;
       let y = ((t.baseY + state.currentY) % worldH + worldH) % worldH;
@@ -185,8 +253,9 @@ function startRenderLoop() {
       // Z push-back: corners go further back
       const zPush = FISHEYE_Z * distSq;
 
-      // Scale: shrink at edges
-      const scale = 1 + (FISHEYE_SCALE - 1) * distSq;
+      // Scale: shrink at edges, multiplied by animation scale
+      const baseScale = 1 + (FISHEYE_SCALE - 1) * distSq;
+      const finalScale = baseScale * (t.animScale !== undefined ? t.animScale : 1);
 
       // Brightness dimming at edges
       const brightness = 1 + (FISHEYE_DIM - 1) * distSq;
@@ -196,7 +265,7 @@ function startRenderLoop() {
          translateZ(${zPush.toFixed(1)}px)
          rotateY(${rotY.toFixed(2)}deg)
          rotateX(${rotX.toFixed(2)}deg)
-         scale(${scale.toFixed(4)})`;
+         scale(${finalScale.toFixed(4)})`;
 
       // Apply brightness via filter (combines with grayscale)
       t.el.querySelector('.tile__img').style.filter =
@@ -221,18 +290,26 @@ function initInput() {
 
   // --- Pointer down: start drag from anywhere ---
   viewport.addEventListener('pointerdown', (e) => {
-    if (e.target.closest('.header, .footer, .about-panel')) return;
+    totalDist = 0; // Reset here so it clears properly even if we click a header link!
+    if (e.target.closest('.header, .footer, .about-panel, .project-panel')) return;
 
     isDragging = true;
     startX = e.clientX;
     startY = e.clientY;
     lastX = e.clientX;
     lastY = e.clientY;
-    totalDist = 0;
     dragTarget = e.target.closest('.tile');
     viewport.setPointerCapture(e.pointerId);
-    e.preventDefault();
+    // Removed e.preventDefault() to allow native clicks, focus, and text selection
   });
+
+  // --- Block native clicks if we dragged ---
+  viewport.addEventListener('click', (e) => {
+    if (totalDist >= CLICK_THRESHOLD) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, { capture: true });
 
   // --- Pointer move: always drag the canvas ---
   viewport.addEventListener('pointermove', (e) => {
@@ -285,12 +362,13 @@ function initInput() {
    3b. PROJECT CLICK HANDLER
    =================================================== */
 function handleProjectClick(project, tileEl) {
-  console.log(`Open project: ${project.title}`);
-  // Flash the tile to confirm the click
-  gsap.fromTo(tileEl, 
-    { boxShadow: '0 0 0px rgba(200,184,168,0)' },
-    { boxShadow: '0 0 30px rgba(200,184,168,0.5)', duration: 0.3, yoyo: true, repeat: 1 }
-  );
+  if (!projectPanel) return;
+  projectInner.innerHTML = `
+    <img class="project-panel__img" src="${project.img}" alt="${project.title}" />
+    <h2 class="project-panel__title">${project.title}</h2>
+    <div class="project-panel__category">${project.category}</div>
+  `;
+  projectPanel.classList.add('is-open');
 }
 
 /* ===================================================
@@ -314,6 +392,13 @@ function initKeyboard() {
    5.  LOADER
    =================================================== */
 function playLoader() {
+  // Pre-hide items for dramatic entrance
+  gsap.set(['.header', '.footer'], { opacity: 0, y: (i) => i === 0 ? -30 : 30 });
+  tiles.forEach(t => {
+    t.animScale = 0;
+    t.el.style.opacity = 0;
+  });
+
   const tl = gsap.timeline({ defaults: { ease: 'expo.out', duration: 1.2 } });
 
   tl.to('.loader__line > span', { y: '0%', stagger: 0.12, duration: 1 })
@@ -323,11 +408,41 @@ function playLoader() {
   function dismiss() {
     if (loaderDone) return;
     loaderDone = true;
+    
+    // Slide loader up and fade
     gsap.to(loader, {
-      opacity: 0, duration: 0.8, ease: 'power2.inOut',
+      y: '-100%', opacity: 0, duration: 1.0, ease: 'expo.inOut',
       onComplete() { loader.style.display = 'none'; },
     });
+    
     viewport.classList.add('is-active');
+
+    // Tiles pop in from the center!
+    gsap.to(tiles, {
+      animScale: 1,
+      duration: 1.2,
+      stagger: { amount: 0.6, from: 'center' },
+      ease: 'back.out(1.5)',
+      delay: 0.3
+    });
+    
+    gsap.to(tiles.map(t => t.el), {
+      opacity: 1,
+      duration: 1.2,
+      stagger: { amount: 0.6, from: 'center' },
+      ease: 'power2.out',
+      delay: 0.3
+    });
+
+    // Reveal header and footer smoothly
+    gsap.to(['.header', '.footer'], {
+      y: 0,
+      opacity: 1,
+      duration: 1.2,
+      stagger: 0.2,
+      ease: 'expo.out',
+      delay: 0.6
+    });
   }
 
   Observer.create({
@@ -350,10 +465,8 @@ function initFilters() {
       activeFilter = filter;
       buttons.forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
-      tiles.forEach((t) => {
-        const show = filter === 'all' || t.project.category === filter;
-        t.el.classList.toggle('is-hidden', !show);
-      });
+      
+      layoutGrid(true); // Animate layout
     });
   });
 }
@@ -363,7 +476,7 @@ function initFilters() {
    =================================================== */
 function initRouting() {
   function handleHash() {
-    const hash = window.location.hash || '#archive';
+    const hash = window.location.hash || '#portfolio';
     header.querySelectorAll('.header__link').forEach((link) => {
       link.classList.toggle('active', link.getAttribute('href') === hash);
     });
@@ -371,7 +484,10 @@ function initRouting() {
   }
   window.addEventListener('hashchange', handleHash);
   handleHash();
-  aboutClose.addEventListener('click', () => { window.location.hash = '#archive'; });
+  aboutClose.addEventListener('click', () => { window.location.hash = '#portfolio'; });
+  if (projectClose) {
+    projectClose.addEventListener('click', () => { projectPanel.classList.remove('is-open'); });
+  }
 }
 
 /* ===================================================
