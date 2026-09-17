@@ -464,3 +464,44 @@ img { display: block; max-width: 100%; }
   text-transform: uppercase;
   font-size: 0.8rem;
 }
+
+/* ===================================================
+   MOBILE RESPONSIVENESS
+   =================================================== */
+@media (max-width: 768px) {
+  .header {
+    padding: var(--space-sm) var(--space-md);
+  }
+  .footer {
+    padding: var(--space-sm) var(--space-md);
+    justify-content: center;
+  }
+  .footer__left, .footer__right {
+    display: none;
+  }
+  .footer__center {
+    max-width: 100%;
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    padding: var(--space-xs);
+  }
+  .footer__center::-webkit-scrollbar {
+    display: none;
+  }
+  .filter-btn {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: 0.55rem;
+  }
+  .loader__name {
+    font-size: 15vw;
+  }
+}
+
+
+@media (max-width: 768px) {
+  .filter-btn {
+    flex-shrink: 0;
+  }
+}
+

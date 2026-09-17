@@ -37,7 +37,7 @@ let activeFilter = 'all';
 let loaderDone = false;
 
 /* ---------- Grid config ---------- */
-const GAP = 6;
+let GAP = 6;
 const LERP = 0.08;
 const DRAG_MULT = 1.8;
 const CLICK_THRESHOLD = 6;  // px — movement below this = click, above = drag
@@ -50,16 +50,37 @@ const FISHEYE_SCALE = 0.8;   // scale down slightly at edges to counteract persp
 const FISHEYE_DIM   = 0.3;   // min brightness at extreme edges
 
 // Tile size presets (varying aspect ratios)
-const TILE_SIZES = [
-  { w: 220, h: 160 },
-  { w: 180, h: 240 },
-  { w: 200, h: 200 },
-  { w: 260, h: 170 },
-  { w: 170, h: 260 },
-  { w: 200, h: 150 },
-  { w: 240, h: 180 },
-  { w: 180, h: 180 },
-];
+let TILE_SIZES = [];
+
+function computeSizes() {
+  const isMobile = window.innerWidth <= 768;
+  GAP = isMobile ? 3 : 6;
+  
+  if (isMobile) {
+    TILE_SIZES = [
+      { w: 120, h: 90 },
+      { w: 90, h: 120 },
+      { w: 100, h: 100 },
+      { w: 140, h: 90 },
+      { w: 90, h: 140 },
+      { w: 110, h: 80 },
+      { w: 130, h: 100 },
+      { w: 100, h: 100 },
+    ];
+  } else {
+    TILE_SIZES = [
+      { w: 220, h: 160 },
+      { w: 180, h: 240 },
+      { w: 200, h: 200 },
+      { w: 260, h: 170 },
+      { w: 170, h: 260 },
+      { w: 200, h: 150 },
+      { w: 240, h: 180 },
+      { w: 180, h: 180 },
+    ];
+  }
+}
+computeSizes();
 
 let worldW = 0;
 let worldH = 0;
@@ -68,11 +89,13 @@ let worldH = 0;
    1.  BUILD THE GRID
    =================================================== */
 function buildGrid() {
+  computeSizes();
+
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
-  const avgTileW = 210;
-  const avgTileH = 200;
+  const avgTileW = TILE_SIZES[0].w;
+  const avgTileH = TILE_SIZES[0].h;
   const baseCols = Math.ceil(vw / (avgTileW + GAP)) + 3;
   const baseRows = Math.ceil(vh / (avgTileH + GAP)) + 3;
 
