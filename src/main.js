@@ -393,7 +393,10 @@ function initKeyboard() {
    =================================================== */
 function playLoader() {
   // Pre-hide items for dramatic entrance
-  gsap.set(['.header', '.footer'], { opacity: 0, y: (i) => i === 0 ? -30 : 30 });
+  gsap.set('.header__nav', { opacity: 0, y: -30 });
+  gsap.set('.footer', { opacity: 0, y: 30 });
+  gsap.set('.header__left', { opacity: 0 });
+  
   tiles.forEach(t => {
     t.animScale = 0;
     t.el.style.opacity = 0;
@@ -409,13 +412,56 @@ function playLoader() {
     if (loaderDone) return;
     loaderDone = true;
     
-    // Slide loader up and fade
-    gsap.to(loader, {
-      y: '-100%', opacity: 0, duration: 1.0, ease: 'expo.inOut',
-      onComplete() { loader.style.display = 'none'; },
-    });
-    
+    // Activate viewport FIRST so layout is fully calculated for accurate FLIP measurements
     viewport.classList.add('is-active');
+
+    const loaderName = document.querySelector('.loader__name');
+    const headerName = document.querySelector('.header__name');
+
+    // Elevate header above the fading loader background so it doesn't get obscured
+    gsap.set('.header', { zIndex: 101 });
+
+    // Fade out tagline, CTA, and loader background
+    gsap.to(['.loader__tagline', '.loader__cta'], { opacity: 0, duration: 0.5 });
+    gsap.to(loader, { backgroundColor: 'rgba(0,0,0,0)', duration: 1.2, ease: 'power2.inOut' });
+    
+    // Get starting bounds from the giant loader text
+    const lRect = loaderName.getBoundingClientRect();
+    
+    // Temporarily make header left visible to get true destination bounds
+    gsap.set('.header__left', { opacity: 1 });
+    const hRect = headerName.getBoundingClientRect();
+
+    // Calculate reverse FLIP (headerName starts at loaderName's position)
+    const scale = lRect.height / hRect.height;
+    
+    gsap.set(headerName, { transformOrigin: '50% 50%' });
+    const lCenterX = lRect.left + lRect.width / 2;
+    const lCenterY = lRect.top + lRect.height / 2;
+    const hCenterX = hRect.left + hRect.width / 2;
+    const hCenterY = hRect.top + hRect.height / 2;
+
+    const startX = lCenterX - hCenterX;
+    const startY = lCenterY - hCenterY;
+
+    // Set headerName to overlay the loaderName
+    gsap.set(headerName, { x: startX, y: startY, scale: scale });
+    // Hide the loader name instantly
+    gsap.set(loaderName, { opacity: 0 });
+
+    // Fly headerName to its natural resting place (x: 0, y: 0, scale: 1)
+    gsap.to(headerName, {
+      x: 0,
+      y: 0,
+      scale: 1,
+      duration: 1.2,
+      ease: 'expo.inOut',
+      onComplete: () => {
+        loader.style.display = 'none';
+        // Clear transform styles so it remains completely clean
+        gsap.set(headerName, { clearProps: 'transform' });
+      }
+    });
 
     // Tiles pop in from the center!
     gsap.to(tiles, {
@@ -434,8 +480,8 @@ function playLoader() {
       delay: 0.3
     });
 
-    // Reveal header and footer smoothly
-    gsap.to(['.header', '.footer'], {
+    // Reveal header nav and footer smoothly
+    gsap.to(['.header__nav', '.footer'], {
       y: 0,
       opacity: 1,
       duration: 1.2,
