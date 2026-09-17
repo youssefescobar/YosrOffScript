@@ -43,11 +43,11 @@ const DRAG_MULT = 1.8;
 const CLICK_THRESHOLD = 6;  // px — movement below this = click, above = drag
 
 /* Fisheye config */
-const FISHEYE_ROT_X = 55;    // max rotateX at top/bottom edges (degrees)
-const FISHEYE_ROT_Y = 65;    // max rotateY at left/right edges (degrees)
-const FISHEYE_Z     = 450;   // positive Z = curves TOWARDS viewer at edges (inside sphere)
-const FISHEYE_SCALE = 0.8;   // scale down slightly at edges to counteract perspective bloat
-const FISHEYE_DIM   = 0.3;   // min brightness at extreme edges
+const FISHEYE_ROT_X = 25;    // reduced to keep items facing forward
+const FISHEYE_ROT_Y = 35;    // reduced to reduce horizontal gaps
+const FISHEYE_Z     = 150;   // reduced from 450 to keep outer items closer
+const FISHEYE_SCALE = 0.85;  // scale down slightly at edges to counteract perspective bloat
+const FISHEYE_DIM   = 0.5;   // keep outer items a bit brighter
 
 // Tile size presets (varying aspect ratios)
 let TILE_SIZES = [];
@@ -165,9 +165,11 @@ function layoutGrid(animate = false) {
   if (visibleTiles.length === 0) return;
 
   const N = visibleTiles.length;
-  const aspect = window.innerWidth / window.innerHeight;
+  let aspect = window.innerWidth / window.innerHeight;
+  if (window.innerWidth <= 768) aspect *= 1.5; // force more columns on mobile
+  
   let cols = Math.ceil(Math.sqrt(N * aspect));
-  if (cols < 1) cols = 1;
+  if (cols < 2) cols = 2; // ensure at least 2 columns
   const rows = Math.ceil(N / cols);
 
   const colWidths = [];
