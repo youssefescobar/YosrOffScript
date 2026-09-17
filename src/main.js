@@ -441,6 +441,7 @@ function playLoader() {
     viewport.classList.add('is-active');
 
     const loaderName = document.querySelector('.loader__name');
+    const loaderText = document.querySelector('.loader__line');
     const headerName = document.querySelector('.header__name');
 
     // Elevate header above the fading loader background so it doesn't get obscured
@@ -450,42 +451,58 @@ function playLoader() {
     gsap.to(['.loader__tagline', '.loader__cta'], { opacity: 0, duration: 0.5 });
     gsap.to(loader, { backgroundColor: 'rgba(0,0,0,0)', duration: 1.2, ease: 'power2.inOut' });
     
-    // Get starting bounds from the giant loader text
-    const lRect = loaderName.getBoundingClientRect();
+    // Get exact starting bounds from the inline text element, NOT the block container
+    const lRect = loaderText.getBoundingClientRect();
     
     // Temporarily make header left visible to get true destination bounds
     gsap.set('.header__left', { opacity: 1 });
     const hRect = headerName.getBoundingClientRect();
 
-    // Calculate reverse FLIP (headerName starts at loaderName's position)
-    const scale = lRect.height / hRect.height;
+    // Lock the left edge ('Y') and vertical center
+    gsap.set([loaderText, headerName], { transformOrigin: '0% 50%' });
     
-    gsap.set(headerName, { transformOrigin: '50% 50%' });
-    const lCenterX = lRect.left + lRect.width / 2;
-    const lCenterY = lRect.top + lRect.height / 2;
-    const hCenterX = hRect.left + hRect.width / 2;
-    const hCenterY = hRect.top + hRect.height / 2;
+    const lRefX = lRect.left;
+    const lRefY = lRect.top + lRect.height / 2;
+    const hRefX = hRect.left;
+    const hRefY = hRect.top + hRect.height / 2;
 
-    const startX = lCenterX - hCenterX;
-    const startY = lCenterY - hCenterY;
+    // HeaderName starts huge, anchored to the left of LoaderText, and invisible
+    const headerStartScale = lRect.height / hRect.height;
+    const headerStartX = lRefX - hRefX;
+    const headerStartY = lRefY - hRefY;
+    gsap.set(headerName, { 
+      x: headerStartX, 
+      y: headerStartY, 
+      scale: headerStartScale,
+      opacity: 0 
+    });
 
-    // Set headerName to overlay the loaderName
-    gsap.set(headerName, { x: startX, y: startY, scale: scale });
-    // Hide the loader name instantly
-    gsap.set(loaderName, { opacity: 0 });
+    // LoaderText shrinks and flies to HeaderName's position
+    const loaderTargetScale = hRect.height / lRect.height;
+    const loaderTargetX = hRefX - lRefX;
+    const loaderTargetY = hRefY - lRefY;
 
-    // Fly headerName to its natural resting place (x: 0, y: 0, scale: 1)
+    // Crossfade them smoothly along the exact same trajectory
     gsap.to(headerName, {
       x: 0,
       y: 0,
       scale: 1,
+      opacity: 1,
       duration: 1.2,
       ease: 'expo.inOut',
       onComplete: () => {
         loader.style.display = 'none';
-        // Clear transform styles so it remains completely clean
-        gsap.set(headerName, { clearProps: 'transform' });
+        gsap.set(headerName, { clearProps: 'transform,opacity' });
       }
+    });
+
+    gsap.to(loaderText, {
+      x: loaderTargetX,
+      y: loaderTargetY,
+      scale: loaderTargetScale,
+      opacity: 0,
+      duration: 1.2,
+      ease: 'expo.inOut'
     });
 
     // Tiles pop in from the center!
