@@ -16,57 +16,58 @@
             <span class="loader__line"><span>Off Script</span></span>
           </h1>
           <p class="loader__tagline"><span>Creative Director + Designer</span></p>
-          <p class="loader__cta"><span>Scroll to enter</span></p>
+          <p class="loader__cta"><span>Click or scroll to enter</span></p>
         </div>
       </div>
 
-      <!-- ====== EXPERIENCE ====== -->
-      <main class="experience" id="experience">
-        <!-- 3D stage -->
-        <div class="stage" id="stage">
-          <div class="world" id="world">
-            <!-- tiles injected by JS -->
-          </div>
+      <!-- ====== MAIN EXPERIENCE ====== -->
+      <div class="viewport" id="viewport">
+        <!-- Infinite wrapping canvas -->
+        <div class="canvas" id="canvas">
+          <!-- tiles injected by JS -->
         </div>
 
-        <!-- Top-left header overlay -->
-        <header class="archive-header">
-          <span class="archive-header__title">Archive</span>
-          <span class="archive-header__count" id="tile-count"></span>
+        <!-- Fixed header -->
+        <header class="header" id="header">
+          <div class="header__left">
+            <span class="header__name">Yosr Off Script</span>
+          </div>
+          <nav class="header__nav">
+            <a href="#archive" class="header__link active">Archive</a>
+            <a href="#about" class="header__link">About</a>
+          </nav>
         </header>
 
-        <!-- Navigation overlay -->
-        <nav class="nav-overlay" id="nav">
-          <a href="#archive" class="nav-overlay__link active">Archive</a>
-          <a href="#about" class="nav-overlay__link">About</a>
-        </nav>
+        <!-- Fixed footer -->
+        <footer class="footer" id="footer">
+          <div class="footer__left">
+            <span class="footer__count" id="tile-count"></span>
+          </div>
+          <div class="footer__center">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="branding">Branding</button>
+            <button class="filter-btn" data-filter="editorial">Editorial</button>
+            <button class="filter-btn" data-filter="digital">Digital</button>
+            <button class="filter-btn" data-filter="motion">Motion</button>
+          </div>
+          <div class="footer__right">
+            <span class="footer__hint">Drag to explore</span>
+          </div>
+        </footer>
 
-        <!-- Filter bar -->
-        <div class="filter-bar" id="filter-bar">
-          <button class="filter-btn active" data-filter="all">All</button>
-          <button class="filter-btn" data-filter="branding">Branding</button>
-          <button class="filter-btn" data-filter="editorial">Editorial</button>
-          <button class="filter-btn" data-filter="digital">Digital</button>
-          <button class="filter-btn" data-filter="motion">Motion</button>
-        </div>
-
-        <!-- About panel (hidden by default) -->
+        <!-- About panel -->
         <section class="about-panel" id="about-panel">
           <div class="about-panel__inner">
             <h2>About</h2>
             <p>
               Creative director & designer based in the digital space.
-              This is a demo portfolio inspired by the walkable 3D archive concept.
+              This is a demo portfolio inspired by the infinite canvas concept.
               Replace this text with your own story.
             </p>
             <button class="about-panel__close" id="about-close">&times;</button>
           </div>
         </section>
-
-        <!-- Vignette overlays -->
-        <div class="vignette vignette--top"></div>
-        <div class="vignette vignette--bottom"></div>
-      </main>
+      </div>
     </div>
 
     <script type="module" src="/src/main.js"></script>
