@@ -9,6 +9,7 @@
 import gsap from 'gsap';
 import { Observer } from 'gsap/Observer';
 import PROJECTS from './projects.js';
+import { initSideRays } from './SideRays.js';
 
 gsap.registerPlugin(Observer);
 
@@ -416,12 +417,17 @@ function initKeyboard() {
 /* ===================================================
    5.  LOADER
    =================================================== */
+let destroySideRays = null;
+
 function playLoader() {
   // Pre-hide items for dramatic entrance
   gsap.set('.header__nav', { opacity: 0, y: -30 });
   gsap.set('.footer', { opacity: 0, y: 30 });
   gsap.set('.header__left', { opacity: 0 });
   
+  // Start the lowkey gravitational rays background effect
+  destroySideRays = initSideRays('#side-rays');
+
   tiles.forEach(t => {
     t.animScale = 0;
     t.el.style.opacity = 0;
@@ -437,6 +443,9 @@ function playLoader() {
     if (loaderDone) return;
     loaderDone = true;
     
+    // Stop the background effect
+    if (destroySideRays) destroySideRays();
+
     // Activate viewport FIRST so layout is fully calculated for accurate FLIP measurements
     viewport.classList.add('is-active');
 
