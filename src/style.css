@@ -92,7 +92,9 @@ img { display: block; max-width: 100%; }
 }
 
 .loader__tagline {
-  margin-top: var(--space-md);
+  margin-top: -20px;
+  margin-left: 30px;
+  text-align: left;
   font-size: 0.85rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -106,7 +108,7 @@ img { display: block; max-width: 100%; }
 }
 
 .loader__cta {
-  margin-top: var(--space-xl);
+  margin-top: 15rem;
   font-size: 0.7rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
