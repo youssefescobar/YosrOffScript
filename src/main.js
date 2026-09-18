@@ -450,17 +450,23 @@ function preloadAssets() {
       document.fonts.ready.then(() => {
         // Wait for intro timeline to finish so we don't conflict
         if (tl.isActive()) {
-          tl.eventCallback('onComplete', () => showCTA());
+          tl.eventCallback('onComplete', () => hideProgressAndShowCTA());
         } else {
-          showCTA();
+          hideProgressAndShowCTA();
         }
       });
     }
   }
 
-  function showCTA() {
-    ctaEl.classList.add('is-ready');
-    playLoader();
+  function hideProgressAndShowCTA() {
+    gsap.to(progressEl, { 
+      opacity: 0, 
+      duration: 0.4, 
+      onComplete: () => {
+        ctaEl.classList.add('is-ready');
+        playLoader();
+      }
+    });
   }
 
   if (total === 0) {
