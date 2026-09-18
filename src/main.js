@@ -82,8 +82,7 @@ function computeSizes() {
 }
 computeSizes();
 
-let worldW = 0;
-let worldH = 0;
+const worldSize = { w: 0, h: 0 };
 
 /* ===================================================
    1.  BUILD THE GRID
@@ -154,8 +153,8 @@ function layoutGrid(animate = false) {
   hiddenTiles.forEach(t => {
     t.el.style.pointerEvents = 'none'; // prevent clicks while fading out
     if (animate) {
-      gsap.to(t, { animScale: 0, duration: 0.6, ease: 'power3.inOut' });
-      gsap.to(t.el, { opacity: 0, duration: 0.6, ease: 'power3.inOut' });
+      gsap.to(t, { animScale: 0, duration: 1.2, ease: 'expo.inOut' });
+      gsap.to(t.el, { opacity: 0, duration: 1.2, ease: 'expo.inOut' });
     } else {
       t.animScale = 0;
       t.el.style.opacity = 0;
@@ -185,16 +184,19 @@ function layoutGrid(animate = false) {
   const contentW = colX[cols - 1] + colWidths[cols - 1] + GAP;
   const contentH = rowY[rows - 1] + rowHeights[rows - 1] + GAP;
 
-  worldW = Math.max(contentW, window.innerWidth);
-  worldH = Math.max(contentH, window.innerHeight);
+  const targetWorldW = Math.max(contentW, window.innerWidth);
+  const targetWorldH = Math.max(contentH, window.innerHeight);
 
-  const offsetX = (worldW - contentW) / 2;
-  const offsetY = (worldH - contentH) / 2;
+  const offsetX = (targetWorldW - contentW) / 2;
+  const offsetY = (targetWorldH - contentH) / 2;
 
-  // Center the view on the new grid
+  // Center the view on the new grid & animate bounds
   if (animate) {
-    gsap.to(state, { targetX: 0, targetY: 0, duration: 1.0, ease: 'power3.inOut' });
+    gsap.to(worldSize, { w: targetWorldW, h: targetWorldH, duration: 1.5, ease: 'expo.inOut' });
+    gsap.to(state, { targetX: 0, targetY: 0, duration: 1.5, ease: 'expo.inOut' });
   } else {
+    worldSize.w = targetWorldW;
+    worldSize.h = targetWorldH;
     state.targetX = 0;
     state.targetY = 0;
     state.currentX = 0;
@@ -215,8 +217,8 @@ function layoutGrid(animate = false) {
     t.h = targetH;
 
     if (animate) {
-      gsap.to(t, { baseX: targetX, baseY: targetY, animScale: 1, duration: 0.8, ease: 'power3.inOut' });
-      gsap.to(t.el, { width: targetW, height: targetH, opacity: 1, duration: 0.8, ease: 'power3.inOut' });
+      gsap.to(t, { baseX: targetX, baseY: targetY, animScale: 1, duration: 1.5, ease: 'expo.inOut' });
+      gsap.to(t.el, { width: targetW, height: targetH, opacity: 1, duration: 1.5, ease: 'expo.inOut' });
     } else {
       t.baseX = targetX;
       t.baseY = targetY;
@@ -244,10 +246,10 @@ function startRenderLoop() {
 
     tiles.forEach((t) => {
       // Toroidal wrapping
-      let x = ((t.baseX + state.currentX) % worldW + worldW) % worldW;
-      let y = ((t.baseY + state.currentY) % worldH + worldH) % worldH;
-      if (x > worldW - t.w) x -= worldW;
-      if (y > worldH - t.h) y -= worldH;
+      let x = ((t.baseX + state.currentX) % worldSize.w + worldSize.w) % worldSize.w;
+      let y = ((t.baseY + state.currentY) % worldSize.h + worldSize.h) % worldSize.h;
+      if (x > worldSize.w - t.w) x -= worldSize.w;
+      if (y > worldSize.h - t.h) y -= worldSize.h;
 
       t.screenX = x;
       t.screenY = y;
@@ -414,9 +416,16 @@ function initKeyboard() {
 }
 
 /* ===================================================
-   5.  LOADER
+   5.  LOADER & PRELOADER
    =================================================== */
-function playLoader() {
+function preloadAssets() {
+  const images = PROJECTS.map(p => p.img);
+  let loadedCount = 0;
+  const total = images.length;
+  
+  const progressEl = document.getElementById('loader-progress');
+  const ctaEl = document.getElementById('loader-cta');
+  
   // Pre-hide items for dramatic entrance
   gsap.set('.header__nav', { opacity: 0, y: -30 });
   gsap.set('.footer', { opacity: 0, y: 30 });
@@ -431,10 +440,56 @@ function playLoader() {
 
   tl.to('.loader__line > span', { y: '0%', stagger: 0.12, duration: 1 })
     .to('.loader__tagline > span', { y: '0%', duration: 0.8 }, '-=0.5')
-    .to('.loader__cta > span', { y: '0%', opacity: 1, duration: 0.8 }, '-=0.3');
+    .to(progressEl, { opacity: 1, duration: 0.5 }, '-=0.3');
+
+  let isReady = false;
+
+  function checkReady() {
+    if (loadedCount >= total && !isReady) {
+      isReady = true;
+      document.fonts.ready.then(() => {
+        // Wait for intro timeline to finish so we don't conflict
+        if (tl.isActive()) {
+          tl.eventCallback('onComplete', () => showCTA());
+        } else {
+          showCTA();
+        }
+      });
+    }
+  }
+
+  function showCTA() {
+    ctaEl.classList.add('is-ready');
+    playLoader();
+  }
+
+  if (total === 0) {
+    checkReady();
+  } else {
+    images.forEach(src => {
+      const img = new Image();
+      img.onload = () => {
+        loadedCount++;
+        const percent = Math.floor((loadedCount / total) * 100);
+        if (progressEl) progressEl.innerText = `${percent}%`;
+        checkReady();
+      };
+      img.onerror = () => {
+        loadedCount++;
+        checkReady();
+      };
+      img.src = src;
+    });
+  }
+}
+
+function playLoader() {
+  const ctaEl = document.getElementById('loader-cta');
+  
+  gsap.to('.loader__cta > span', { y: '0%', opacity: 1, duration: 0.8 });
 
   // Any click/scroll clears the loader
-  Observer.create({
+  const obs = Observer.create({
     target: window,
     type: 'pointer,wheel,touch',
     onPress: dismiss,
@@ -443,12 +498,15 @@ function playLoader() {
   });
   
   // Also dismiss if they click the CTA
-  document.querySelector('.loader__cta').addEventListener('click', dismiss);
+  ctaEl.addEventListener('click', dismiss);
 
   function dismiss() {
     if (loaderDone) return;
     loaderDone = true;
     
+    // Clean up observer
+    obs.kill();
+
     // Activate viewport FIRST so layout is fully calculated for accurate FLIP measurements
     viewport.classList.add('is-active');
 
@@ -459,8 +517,8 @@ function playLoader() {
     // Elevate header above the fading loader background so it doesn't get obscured
     gsap.set('.header', { zIndex: 101 });
 
-    // Fade out tagline, CTA, and loader background
-    gsap.to(['.loader__tagline', '.loader__cta'], { opacity: 0, duration: 0.5 });
+    // Fade out tagline, CTA, progress, and loader background
+    gsap.to(['.loader__tagline', '.loader__cta', '.loader__progress'], { opacity: 0, duration: 0.5 });
     gsap.to(loader, { backgroundColor: 'rgba(0,0,0,0)', duration: 1.2, ease: 'power2.inOut' });
     
     // Get exact starting bounds from the inline text element, NOT the block container
@@ -520,16 +578,16 @@ function playLoader() {
     // Tiles pop in from the center!
     gsap.to(tiles, {
       animScale: 1,
-      duration: 1.2,
-      stagger: { amount: 0.6, from: 'center' },
+      duration: 1.5,
+      stagger: { amount: 0.8, from: 'center' },
       ease: 'back.out(1.5)',
       delay: 0.3
     });
     
     gsap.to(tiles.map(t => t.el), {
       opacity: 1,
-      duration: 1.2,
-      stagger: { amount: 0.6, from: 'center' },
+      duration: 1.5,
+      stagger: { amount: 0.8, from: 'center' },
       ease: 'power2.out',
       delay: 0.3
     });
@@ -544,13 +602,6 @@ function playLoader() {
       delay: 0.6
     });
   }
-
-  Observer.create({
-    target: loader,
-    type: 'wheel,touch,pointer',
-    onDown: dismiss, onUp: dismiss, onWheel: dismiss,
-  });
-  loader.addEventListener('click', dismiss);
 }
 
 /* ===================================================
@@ -612,7 +663,7 @@ function init() {
   initFilters();
   initRouting();
   initResize();
-  playLoader();
+  preloadAssets();
 }
 
 if (document.readyState === 'loading') {
