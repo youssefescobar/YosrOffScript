@@ -404,6 +404,23 @@ img { display: block; max-width: 100%; }
 .about-card {
   flex-shrink: 0;
   width: 280px;
+  position: relative;
+}
+
+/* Ambient Backlight Aura around Card */
+.about-card__aura {
+  position: absolute;
+  inset: -20px;
+  border-radius: 35px;
+  background: var(--card-aura-bg, transparent);
+  filter: blur(45px);
+  opacity: var(--card-aura-opacity, 0);
+  pointer-events: none;
+  z-index: -1;
+  transform: translateZ(-5px);
+  -webkit-transform: translateZ(-5px);
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), background 0.5s ease;
+  will-change: opacity, background;
 }
 
 .about-card__flipper,
@@ -427,6 +444,10 @@ img { display: block; max-width: 100%; }
   overflow: hidden;
   border-radius: var(--tile-radius);
   perspective: 600px;
+  position: relative;
+  border: 1px solid var(--card-hue-border, rgba(255, 255, 255, 0.1));
+  box-shadow: var(--card-hue-glow, none);
+  transition: border-color 0.5s ease, box-shadow 0.5s ease;
 }
 
 .about-panel__photo {
@@ -588,6 +609,58 @@ img { display: block; max-width: 100%; }
 .about-panel__social[data-brand="linkedin"] .about-panel__tooltip,
 .about-panel__social[data-brand="linkedin"] .about-panel__tooltip::before {
   background-color: #0077b5;
+}
+
+/* ===================================================
+   SOCIAL HOVER CARD HUE SHIFT (Desktop + Mobile)
+   =================================================== */
+
+/* 1. Email Hover (Vivid Red / Coral) */
+.about-card[data-active-brand="email"],
+.about-card:has(.about-panel__social[data-brand="email"]:hover),
+.about-panel__inner:has(.about-panel__social[data-brand="email"]:hover) .about-card {
+  --card-aura-opacity: 1;
+  --card-aura-bg: radial-gradient(circle at 50% 65%, rgba(234, 67, 53, 0.65) 0%, rgba(234, 67, 53, 0.25) 50%, transparent 75%);
+  --card-hue-glow: 0 0 50px rgba(234, 67, 53, 0.45), 0 0 20px rgba(234, 67, 53, 0.3);
+  --card-hue-border: rgba(234, 67, 53, 0.65);
+}
+
+.about-card[data-active-brand="email"] .about-card__flip-dot,
+.about-card:has(.about-panel__social[data-brand="email"]:hover) .about-card__flip-dot {
+  background: #EA4335;
+  box-shadow: 0 0 10px #EA4335;
+}
+
+/* 2. Instagram Hover (Vivid Sunset Gradient / Magenta) */
+.about-card[data-active-brand="instagram"],
+.about-card:has(.about-panel__social[data-brand="instagram"]:hover),
+.about-panel__inner:has(.about-panel__social[data-brand="instagram"]:hover) .about-card {
+  --card-aura-opacity: 1;
+  --card-aura-bg: radial-gradient(circle at 50% 65%, rgba(225, 48, 108, 0.65) 0%, rgba(240, 148, 51, 0.4) 45%, rgba(188, 24, 136, 0.2) 70%, transparent 85%);
+  --card-hue-glow: 0 0 55px rgba(225, 48, 108, 0.45), 0 0 25px rgba(240, 148, 51, 0.3);
+  --card-hue-border: rgba(225, 48, 108, 0.65);
+}
+
+.about-card[data-active-brand="instagram"] .about-card__flip-dot,
+.about-card:has(.about-panel__social[data-brand="instagram"]:hover) .about-card__flip-dot {
+  background: #E1306C;
+  box-shadow: 0 0 10px #E1306C;
+}
+
+/* 3. LinkedIn Hover (Vivid Cyan / Blue) */
+.about-card[data-active-brand="linkedin"],
+.about-card:has(.about-panel__social[data-brand="linkedin"]:hover),
+.about-panel__inner:has(.about-panel__social[data-brand="linkedin"]:hover) .about-card {
+  --card-aura-opacity: 1;
+  --card-aura-bg: radial-gradient(circle at 50% 65%, rgba(0, 140, 240, 0.65) 0%, rgba(0, 119, 181, 0.3) 50%, transparent 75%);
+  --card-hue-glow: 0 0 50px rgba(0, 150, 240, 0.45), 0 0 20px rgba(0, 119, 181, 0.3);
+  --card-hue-border: rgba(0, 172, 238, 0.65);
+}
+
+.about-card[data-active-brand="linkedin"] .about-card__flip-dot,
+.about-card:has(.about-panel__social[data-brand="linkedin"]:hover) .about-card__flip-dot {
+  background: #00acee;
+  box-shadow: 0 0 10px #00acee;
 }
 
 /* GSAP reveal — elements start hidden */
@@ -762,14 +835,17 @@ img { display: block; max-width: 100%; }
     border-radius: 20px;
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--card-hue-border, rgba(255, 255, 255, 0.14));
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.04), var(--card-hue-glow, 0 0 0 transparent);
+    transition: border-color 0.5s ease, box-shadow 0.5s ease;
   }
 
   /* FRONT FACE — overflow visible allows tooltips to pop outside the card */
   .about-card__front {
     background: #000;
     overflow: visible;
+    transform: rotateY(0deg);
+    -webkit-transform: rotateY(0deg);
   }
 
   /* The photo wrap clips the image and gradient to the card's rounded corners */
@@ -822,33 +898,64 @@ img { display: block; max-width: 100%; }
     pointer-events: auto;
   }
 
-  /* Flip Badge in top-right */
+  /* Niche Editorial Flip Badge in top-right */
   .about-card__flip-badge {
     position: absolute;
     top: 16px;
     right: 16px;
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
+    gap: 7px;
+    padding: 7px 14px;
     border-radius: 100px;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    font-size: 0.65rem;
+    background: rgba(14, 14, 18, 0.68);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    font-size: 0.58rem;
     font-weight: 500;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: #fff;
+    color: rgba(255, 255, 255, 0.92);
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    transition: background 0.3s, border-color 0.3s;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s, border-color 0.3s, box-shadow 0.3s;
+    user-select: none;
+    -webkit-user-select: none;
   }
 
+  .about-card__flip-badge:hover,
   .about-card__flip-badge:active {
-    background: rgba(255, 255, 255, 0.15);
+    transform: scale(1.05);
+    background: rgba(26, 26, 32, 0.85);
     border-color: var(--color-accent);
+    box-shadow: 0 4px 25px rgba(200, 184, 168, 0.25);
+  }
+
+  .about-card__flip-badge svg {
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity: 0.8;
+  }
+
+  .about-card__flip-badge:hover svg,
+  .about-card__flip-badge:active svg {
+    transform: rotate(180deg);
+    opacity: 1;
+  }
+
+  /* Micro glowing accent dot */
+  .about-card__flip-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    box-shadow: 0 0 8px var(--color-accent);
+    animation: pulseDot 2s ease-in-out infinite alternate;
+  }
+
+  @keyframes pulseDot {
+    0% { opacity: 0.6; transform: scale(0.9); }
+    100% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 12px var(--color-accent); }
   }
 
   .about-card__front-info .about-panel__name {
@@ -884,53 +991,43 @@ img { display: block; max-width: 100%; }
   /* BACK FACE */
   .about-card__back {
     transform: rotateY(180deg);
-    background: rgba(14, 14, 16, 0.96);
-    backdrop-filter: blur(30px);
-    -webkit-backdrop-filter: blur(30px);
+    -webkit-transform: rotateY(180deg);
+    background: #0e0e11;
+    background: linear-gradient(165deg, #16161b 0%, #0a0a0d 100%);
     padding: 24px 20px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     text-align: left;
+    overflow: hidden;
   }
 
   .about-card__back-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     margin-bottom: 16px;
     padding-bottom: 12px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
 
-  .about-card__back-title {
-    font-size: 0.7rem;
-    letter-spacing: 0.18em;
+  .about-card__back-badge {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.58rem;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--color-accent);
     font-weight: 500;
   }
 
-  .about-card__flip-back-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 12px;
-    border-radius: 100px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    font-size: 0.65rem;
-    font-weight: 500;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #fff;
-    cursor: pointer;
-    transition: background 0.3s, border-color 0.3s;
-  }
-
-  .about-card__flip-back-btn:active {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: var(--color-accent);
+  .about-card__back-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    box-shadow: 0 0 6px var(--color-accent);
   }
 
   .about-card__back-content {
@@ -972,16 +1069,6 @@ img { display: block; max-width: 100%; }
     border: 1px solid rgba(200, 184, 168, 0.2);
     padding: 4px 10px;
     border-radius: 100px;
-  }
-
-  .about-card__back-hint {
-    font-size: 0.6rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--color-text-muted);
-    text-align: center;
-    padding-top: 10px;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
   }
 }
 

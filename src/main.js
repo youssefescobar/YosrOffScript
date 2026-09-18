@@ -639,7 +639,8 @@ function initRouting() {
   const photoWrap = document.querySelector('.about-panel__photo-wrap');
   const photo = document.querySelector('.about-panel__photo');
   const cardFlipper = document.getElementById('about-flipper');
-  const flipBackBtn = document.getElementById('about-flip-back');
+  const aboutCard = document.getElementById('about-card');
+  const flipBadge = document.getElementById('about-flip-badge');
 
   function getAboutTarget() {
     const isMobile = window.innerWidth <= 768;
@@ -658,12 +659,33 @@ function initRouting() {
     });
   }
 
-  if (flipBackBtn) {
-    flipBackBtn.addEventListener('click', (e) => {
+  if (flipBadge) {
+    flipBadge.addEventListener('click', (e) => {
+      if (window.innerWidth > 768) return;
       e.stopPropagation();
-      if (cardFlipper) cardFlipper.classList.remove('is-flipped');
+      if (cardFlipper) cardFlipper.classList.toggle('is-flipped');
     });
   }
+
+  // --- Social Brand Hover Card Hue Sync (Desktop + Mobile) ---
+  const socialButtons = aboutPanel.querySelectorAll('.about-panel__social');
+  socialButtons.forEach((btn) => {
+    const brand = btn.dataset.brand;
+    if (!brand) return;
+
+    btn.addEventListener('mouseenter', () => {
+      if (aboutCard) aboutCard.setAttribute('data-active-brand', brand);
+    });
+    btn.addEventListener('mouseleave', () => {
+      if (aboutCard) aboutCard.removeAttribute('data-active-brand');
+    });
+    btn.addEventListener('focus', () => {
+      if (aboutCard) aboutCard.setAttribute('data-active-brand', brand);
+    });
+    btn.addEventListener('blur', () => {
+      if (aboutCard) aboutCard.removeAttribute('data-active-brand');
+    });
+  });
 
   // --- 3D photo tilt on mouse move (Desktop) ---
   function onPhotoMove(e) {
@@ -888,6 +910,7 @@ function initRouting() {
         aboutPanel.classList.remove('is-open');
         if (aboutCard) {
           gsap.set(aboutCard, { clearProps: 'opacity,scale,y' });
+          aboutCard.removeAttribute('data-active-brand');
         }
         if (cardFlipper) {
           cardFlipper.classList.remove('is-flipped');
