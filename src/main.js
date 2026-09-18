@@ -636,13 +636,38 @@ function initRouting() {
   let photoTiltActive = false;
 
   const headerName = document.querySelector('.header__name');
-  const aboutName = document.getElementById('about-name');
   const photoWrap = document.querySelector('.about-panel__photo-wrap');
   const photo = document.querySelector('.about-panel__photo');
+  const cardFlipper = document.getElementById('about-flipper');
+  const flipBackBtn = document.getElementById('about-flip-back');
 
-  // --- 3D photo tilt on mouse move ---
+  function getAboutTarget() {
+    const isMobile = window.innerWidth <= 768;
+    return isMobile
+      ? (document.getElementById('about-name-mobile') || document.getElementById('about-name'))
+      : document.getElementById('about-name');
+  }
+
+  // --- Mobile 3D Card Flip interaction ---
+  if (cardFlipper) {
+    cardFlipper.addEventListener('click', (e) => {
+      if (window.innerWidth > 768) return;
+      // Do not flip if clicked on a link or social button
+      if (e.target.closest('a, .about-panel__social')) return;
+      cardFlipper.classList.toggle('is-flipped');
+    });
+  }
+
+  if (flipBackBtn) {
+    flipBackBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (cardFlipper) cardFlipper.classList.remove('is-flipped');
+    });
+  }
+
+  // --- 3D photo tilt on mouse move (Desktop) ---
   function onPhotoMove(e) {
-    if (!photoTiltActive || !photoWrap) return;
+    if (!photoTiltActive || !photoWrap || window.innerWidth <= 768) return;
     const rect = photoWrap.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;   // 0..1
     const y = (e.clientY - rect.top) / rect.height;    // 0..1
@@ -658,6 +683,7 @@ function initRouting() {
   }
 
   function onPhotoLeave() {
+    if (window.innerWidth <= 768) return;
     gsap.to(photo, {
       rotateX: 0,
       rotateY: 0,
@@ -679,6 +705,13 @@ function initRouting() {
     }
     aboutAnimated = true;
     photoTiltActive = true;
+
+    // Reset flipper to front face whenever opened
+    if (cardFlipper) {
+      cardFlipper.classList.remove('is-flipped');
+    }
+
+    const aboutName = getAboutTarget();
 
     // --- Crossfade FLIP (same technique as loader → header) ---
     // Both elements share transformOrigin: '0% 50%' so they scale from the left edge
@@ -729,15 +762,26 @@ function initRouting() {
     aboutPanel.style.removeProperty('transition');
     aboutPanel.classList.add('is-open');
 
+    const isMobile = window.innerWidth <= 768;
+    const aboutCard = document.getElementById('about-card');
+    const openDuration = isMobile ? 0.7 : 1.2;
+
+    if (isMobile && aboutCard) {
+      gsap.fromTo(aboutCard,
+        { opacity: 0, scale: 0.94, y: 30 },
+        { opacity: 1, scale: 1, y: 0, duration: 0.7, ease: 'expo.out', delay: 0.08 }
+      );
+    }
+
     // 8. Crossfade: aboutName grows in, headerName shrinks out (same path)
     gsap.to(aboutName, {
       x: 0, y: 0, scale: 1, opacity: 1,
-      duration: 1.2, ease: 'expo.inOut',
+      duration: openDuration, ease: 'expo.inOut',
     });
 
     gsap.to(headerName, {
       x: headerTargetX, y: headerTargetY, scale: headerTargetScale, opacity: 0,
-      duration: 1.2, ease: 'expo.inOut',
+      duration: openDuration, ease: 'expo.inOut',
       onComplete: () => {
         gsap.set(headerName, { clearProps: 'transform' });
         // opacity stays 0 — header name stays hidden while about is open
@@ -765,6 +809,21 @@ function initRouting() {
       return;
     }
     aboutAnimated = false;
+
+    const isMobile = window.innerWidth <= 768;
+    const aboutCard = document.getElementById('about-card');
+    const aboutName = getAboutTarget();
+
+    // On mobile: immediately animate the card down and out of the way!
+    if (isMobile && aboutCard) {
+      gsap.to(aboutCard, {
+        opacity: 0,
+        scale: 0.92,
+        y: 40,
+        duration: 0.45,
+        ease: 'power2.in',
+      });
+    }
 
     // --- Reverse crossfade FLIP ---
     // 1. Measure both positions
@@ -808,20 +867,31 @@ function initRouting() {
       duration: 0.6, ease: 'power2.in',
     });
 
+    // On mobile: quick, crisp 0.55s transition with zero delay!
+    // On desktop: keep the original 1.2s luxurious transition
+    const closeDuration = isMobile ? 0.55 : 1.2;
+    const closeEase = isMobile ? 'power3.out' : 'expo.inOut';
+
     // 5. Crossfade: aboutName shrinks out, headerName grows in (same path)
     gsap.to(aboutName, {
       x: aboutTargetX, y: aboutTargetY, scale: aboutTargetScale, opacity: 0,
-      duration: 1.2, ease: 'expo.inOut',
+      duration: closeDuration, ease: closeEase,
     });
 
     gsap.to(headerName, {
       x: 0, y: 0, scale: 1, opacity: 1,
-      duration: 1.2, ease: 'expo.inOut',
+      duration: closeDuration, ease: closeEase,
       onComplete: () => {
         gsap.set(headerName, { clearProps: 'transform' });
         // Clean up about panel — skip CSS transition, hide instantly
         aboutPanel.style.transition = 'none';
         aboutPanel.classList.remove('is-open');
+        if (aboutCard) {
+          gsap.set(aboutCard, { clearProps: 'opacity,scale,y' });
+        }
+        if (cardFlipper) {
+          cardFlipper.classList.remove('is-flipped');
+        }
         gsap.set(aboutName, { opacity: 0, clearProps: 'x,y,scale,transformOrigin' });
         gsap.set(photo, { clearProps: 'clipPath,scale,rotateX,rotateY' });
         gsap.set(reveals, { opacity: 0, y: 25 });
@@ -835,7 +905,8 @@ function initRouting() {
 
     // 6. Fade out backdrop
     const backdrop = aboutPanel.querySelector('.about-panel__backdrop');
-    gsap.to(backdrop, { opacity: 0, duration: 0.8, ease: 'power2.inOut' });
+    const backdropDuration = isMobile ? 0.45 : 0.8;
+    gsap.to(backdrop, { opacity: 0, duration: backdropDuration, ease: 'power2.inOut' });
   }
 
   function handleHash() {

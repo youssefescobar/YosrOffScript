@@ -400,9 +400,29 @@ img { display: block; max-width: 100%; }
   gap: var(--space-xl);
 }
 
+/* Card Container (Desktop: Left photo column) */
+.about-card {
+  flex-shrink: 0;
+  width: 280px;
+}
+
+.about-card__flipper,
+.about-card__front {
+  width: 100%;
+}
+
+.about-card__front-info,
+.about-card__back,
+.about-card__overlay {
+  display: none;
+}
+
+.about-desktop-content {
+  display: block;
+}
+
 /* Photo */
 .about-panel__photo-wrap {
-  flex-shrink: 0;
   width: 280px;
   overflow: hidden;
   border-radius: var(--tile-radius);
@@ -435,6 +455,7 @@ img { display: block; max-width: 100%; }
   font-size: clamp(1.8rem, 4vw, 3rem);
   font-weight: 300;
   letter-spacing: -0.02em;
+  text-transform: uppercase;
   margin-bottom: var(--space-xs);
   opacity: 0; /* hidden until FLIP anim */
   display: inline-block;
@@ -675,17 +696,292 @@ img { display: block; max-width: 100%; }
   .loader__name {
     font-size: 9vw;
   }
-  .about-panel__inner {
-    flex-direction: column;
+
+  /* About panel mobile layout — 3D Flip Card */
+  .about-desktop-content {
+    display: none !important;
+  }
+
+  .about-card__front-info,
+  .about-card__back,
+  .about-card__overlay {
+    display: block;
+  }
+
+  .about-panel {
     align-items: center;
-    text-align: center;
-    padding: var(--space-xl) var(--space-md);
-  }
-  .about-panel__photo-wrap {
-    width: 180px;
-  }
-  .about-panel__socials {
     justify-content: center;
+    padding: var(--space-md);
+  }
+
+  .about-panel__inner {
+    padding: 0;
+    width: 100%;
+    max-width: 360px;
+    margin: auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* 3D Card Container */
+  .about-card {
+    width: 100%;
+    max-width: 350px;
+    height: clamp(480px, 75vh, 560px);
+    perspective: 1200px;
+    -webkit-perspective: 1200px;
+    position: relative;
+    cursor: pointer;
+    overflow: visible;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 3D Flipper */
+  .about-card__flipper {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    -webkit-transform-style: preserve-3d;
+    transition: transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: visible;
+  }
+
+  .about-card__flipper.is-flipped {
+    transform: rotateY(180deg);
+  }
+
+  /* Shared Card Faces */
+  .about-card__front,
+  .about-card__back {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 20px;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+
+  /* FRONT FACE — overflow visible allows tooltips to pop outside the card */
+  .about-card__front {
+    background: #000;
+    overflow: visible;
+  }
+
+  /* The photo wrap clips the image and gradient to the card's rounded corners */
+  .about-card__front .about-panel__photo-wrap {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 19px;
+    overflow: hidden;
+    perspective: none;
+  }
+
+  .about-card__front .about-panel__photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(0.2) brightness(0.9) contrast(1.05);
+  }
+
+  .about-card__overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.15) 0%,
+      rgba(0, 0, 0, 0.08) 25%,
+      rgba(0, 0, 0, 0.68) 65%,
+      rgba(0, 0, 0, 0.94) 86%,
+      rgba(0, 0, 0, 0.98) 100%
+    );
+    pointer-events: none;
+  }
+
+  /* Front Content Overlay — overflow visible so social tooltips extend outside */
+  .about-card__front-info {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 24px 20px 22px;
+    z-index: 2;
+    text-align: left;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  .about-card__front-info > * {
+    pointer-events: auto;
+  }
+
+  /* Flip Badge in top-right */
+  .about-card__flip-badge {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 100px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    transition: background 0.3s, border-color 0.3s;
+  }
+
+  .about-card__flip-badge:active {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--color-accent);
+  }
+
+  .about-card__front-info .about-panel__name {
+    font-size: clamp(1.6rem, 6vw, 2.1rem);
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    line-height: 1.1;
+    margin-bottom: 4px;
+    color: #fff;
+  }
+
+  .about-card__front-info .about-panel__role {
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    margin-bottom: 8px;
+  }
+
+  .about-card__tagline {
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.78);
+    margin-bottom: 16px;
+  }
+
+  .about-card__mobile-socials {
+    margin-top: 0;
+    gap: 12px;
+  }
+
+  /* BACK FACE */
+  .about-card__back {
+    transform: rotateY(180deg);
+    background: rgba(14, 14, 16, 0.96);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-align: left;
+  }
+
+  .about-card__back-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .about-card__back-title {
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    font-weight: 500;
+  }
+
+  .about-card__flip-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 100px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.3s, border-color 0.3s;
+  }
+
+  .about-card__flip-back-btn:active {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: var(--color-accent);
+  }
+
+  .about-card__back-content {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-right: 4px;
+  }
+
+  .about-card__back-heading {
+    font-size: 1.3rem;
+    font-weight: 300;
+    letter-spacing: -0.01em;
+    margin-bottom: 12px;
+    color: #fff;
+  }
+
+  .about-card__back-content .about-panel__bio {
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: var(--color-text-muted);
+    margin-bottom: 12px;
+  }
+
+  .about-card__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 14px;
+    margin-bottom: 14px;
+  }
+
+  .about-card__tags span {
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    background: rgba(200, 184, 168, 0.1);
+    border: 1px solid rgba(200, 184, 168, 0.2);
+    padding: 4px 10px;
+    border-radius: 100px;
+  }
+
+  .about-card__back-hint {
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    text-align: center;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
   }
 }
 

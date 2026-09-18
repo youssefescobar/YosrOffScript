@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     
     <!-- Meta tags for sharing (WhatsApp, iMessage, etc.) -->
-    <meta property="og:title" content="Yosr OffScript" />
+    <meta property="og:title" content="YosrOffScript" />
     <meta property="og:description" content="Creative Director + Designer" />
     <meta property="og:image" content="/preview.png" />
     <meta property="og:type" content="website" />
@@ -15,7 +15,7 @@
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/preview.png" />
 
-    <title>Yosr OffScript</title>
+    <title>YosrOffScript</title>
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
@@ -24,7 +24,7 @@
       <div class="loader" id="loader">
         <div class="loader__inner">
           <h1 class="loader__name">
-            <span class="loader__line"><span>Yosr OffScript</span></span>
+            <span class="loader__line"><span>YOSROFFSCRIPT</span></span>
           </h1>
           <p class="loader__tagline"><span>Creative Director + Designer</span></p>
           <div class="loader__progress" id="loader-progress">0%</div>
@@ -43,7 +43,7 @@
       <!-- Fixed header -->
       <header class="header" id="header">
         <div class="header__left">
-          <span class="header__name">Yosr OffScript</span>
+          <span class="header__name">YOSROFFSCRIPT</span>
         </div>
         <nav class="header__nav">
           <a href="#portfolio" class="header__link active">Portfolio</a>
@@ -73,19 +73,90 @@
         <div class="about-panel__backdrop" id="about-close"></div>
         <div class="about-panel__inner">
 
-          <div class="about-panel__photo-wrap about-reveal">
-            <img class="about-panel__photo" src="/yosr.jpeg" alt="Yosr" />
+          <!-- 3D FLIP CARD (Mobile interactive card / Desktop photo column) -->
+          <div class="about-card" id="about-card">
+            <div class="about-card__flipper" id="about-flipper">
+
+              <!-- CARD FRONT (Mobile visual card / Desktop Left photo) -->
+              <div class="about-card__front" id="about-card-front">
+                <div class="about-panel__photo-wrap about-reveal">
+                  <img class="about-panel__photo" src="/yosr.jpeg" alt="Yosr" />
+                  <div class="about-card__overlay"></div>
+                </div>
+
+                <!-- Mobile only front elements (Hidden on Desktop) -->
+                <div class="about-card__front-info">
+                  <div class="about-card__flip-badge" id="about-flip-badge">
+                    <span>Tap to flip</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+                  </div>
+
+                  <h2 class="about-panel__name about-name-mobile" id="about-name-mobile">YOSROFFSCRIPT</h2>
+                  <p class="about-panel__role">Creative Director &amp; Designer</p>
+                  <p class="about-card__tagline">Digital experiences, visual direction &amp; branding.</p>
+
+                  <div class="about-panel__socials about-card__mobile-socials">
+                    <a href="mailto:hello@yosroffscript.com" class="about-panel__social" data-brand="email" aria-label="Email">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                      <span class="about-panel__tooltip">hello@yosr</span>
+                    </a>
+                    <a href="https://www.instagram.com/__yosr__/" target="_blank" rel="noopener noreferrer" class="about-panel__social" data-brand="instagram" aria-label="Instagram">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none"/></svg>
+                      <span class="about-panel__tooltip">__yosr__</span>
+                    </a>
+                    <a href="https://www.linkedin.com/in/yosr-al-gabbas-8a11bb249/" target="_blank" rel="noopener noreferrer" class="about-panel__social" data-brand="linkedin" aria-label="LinkedIn">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+                      <span class="about-panel__tooltip">Yosr Al-Gabbas</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              <!-- CARD BACK (Mobile full story details) -->
+              <div class="about-card__back" id="about-card-back">
+                <div class="about-card__back-header">
+                  <span class="about-card__back-title">About</span>
+                  <button type="button" class="about-card__flip-back-btn" id="about-flip-back" aria-label="Flip back">
+                    <span>Back</span>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 21H3v-5"/></svg>
+                  </button>
+                </div>
+
+                <div class="about-card__back-content">
+                  <h3 class="about-card__back-heading">The Story</h3>
+                  <p class="about-panel__bio">
+                    Multidisciplinary creative director with a focus on branding, editorial design, and digital experiences. I believe in the power of restraint — letting the work breathe, stripping away the unnecessary, and finding beauty in simplicity.
+                  </p>
+                  <p class="about-panel__bio">
+                    Currently available for freelance projects and creative collaborations. Based in the digital space, working globally.
+                  </p>
+
+                  <div class="about-card__tags">
+                    <span>Branding</span>
+                    <span>Editorial</span>
+                    <span>Digital</span>
+                    <span>Direction</span>
+                  </div>
+                </div>
+
+                <div class="about-card__back-hint">
+                  <span>Tap card or back button to flip</span>
+                </div>
+              </div>
+
+            </div>
           </div>
 
-          <div class="about-panel__content">
-            <h2 class="about-panel__name" id="about-name">Yosr OffScript</h2>
+          <!-- DESKTOP CONTENT (Right Column on screens > 768px, Hidden on Mobile) -->
+          <div class="about-panel__content about-desktop-content">
+            <h2 class="about-panel__name" id="about-name">YOSROFFSCRIPT</h2>
             <p class="about-panel__role about-reveal">Creative Director &amp; Designer</p>
 
             <p class="about-panel__bio about-reveal">
-              Multidisciplinary creative director with a focus on branding, editorial design, and women (im gay). I believe in the power of restraint — letting the work breathe, stripping away the unnecessary, and finding beauty in simplicity and women bardo 3ady.
+              Multidisciplinary creative director with a focus on branding, editorial design, and digital experiences. I believe in the power of restraint — letting the work breathe, stripping away the unnecessary, and finding beauty in simplicity.
             </p>
             <p class="about-panel__bio about-reveal">
-              Currently available for freelance projects and creative collaborations. Based in the digital space, working globally espically with women. baradidi
+              Currently available for freelance projects and creative collaborations. Based in the digital space, working globally.
             </p>
 
             <div class="about-panel__socials about-reveal">
@@ -93,13 +164,13 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
                 <span class="about-panel__tooltip">hello@yosr</span>
               </a>
-              <a href="https://instagram.com" target="_blank" class="about-panel__social" data-brand="instagram" aria-label="Instagram">
+              <a href="https://www.instagram.com/__yosr__/" target="_blank" rel="noopener noreferrer" class="about-panel__social" data-brand="instagram" aria-label="Instagram">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none"/></svg>
-                <span class="about-panel__tooltip">@yosr</span>
+                <span class="about-panel__tooltip">__yosr__</span>
               </a>
-              <a href="https://linkedin.com" target="_blank" class="about-panel__social" data-brand="linkedin" aria-label="LinkedIn">
+              <a href="https://www.linkedin.com/in/yosr-al-gabbas-8a11bb249/" target="_blank" rel="noopener noreferrer" class="about-panel__social" data-brand="linkedin" aria-label="LinkedIn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
-                <span class="about-panel__tooltip">@yosr</span>
+                <span class="about-panel__tooltip">Yosr Al-Gabbas</span>
               </a>
             </div>
           </div>
