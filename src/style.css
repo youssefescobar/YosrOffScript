@@ -369,11 +369,10 @@ img { display: block; max-width: 100%; }
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.92);
-  backdrop-filter: blur(20px);
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.5s var(--ease-out-expo), visibility 0.5s;
+  transition: opacity 0.6s var(--ease-out-expo), visibility 0.6s;
+  overflow-y: auto;
 }
 
 .about-panel.is-open {
@@ -381,36 +380,200 @@ img { display: block; max-width: 100%; }
   visibility: visible;
 }
 
-.about-panel__inner {
-  max-width: 600px;
-  padding: var(--space-xl);
-  text-align: center;
+/* Clickable backdrop — closes the panel */
+.about-panel__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(20px);
+  cursor: pointer;
 }
 
-.about-panel__inner h2 {
-  font-size: clamp(2rem, 5vw, 4rem);
+.about-panel__inner {
+  position: relative;
+  z-index: 1;
+  max-width: 900px;
+  width: 100%;
+  padding: var(--space-xl);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-xl);
+}
+
+/* Photo */
+.about-panel__photo-wrap {
+  flex-shrink: 0;
+  width: 280px;
+  overflow: hidden;
+  border-radius: var(--tile-radius);
+  perspective: 600px;
+}
+
+.about-panel__photo {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  display: block;
+  filter: grayscale(0.6) brightness(0.85) contrast(1.05);
+  transition: filter 0.6s var(--ease-out-expo);
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.about-panel__photo-wrap:hover .about-panel__photo {
+  filter: grayscale(0) brightness(1) contrast(1);
+}
+
+/* Content */
+.about-panel__content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Name — used as FLIP animation target */
+.about-panel__name {
+  font-size: clamp(1.8rem, 4vw, 3rem);
   font-weight: 300;
   letter-spacing: -0.02em;
+  margin-bottom: var(--space-xs);
+  opacity: 0; /* hidden until FLIP anim */
+  display: inline-block;
+}
+
+.about-panel__role {
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-accent);
   margin-bottom: var(--space-lg);
 }
 
-.about-panel__inner p {
+.about-panel__bio {
   color: var(--color-text-muted);
-  font-size: 1rem;
+  font-size: 0.95rem;
   line-height: 1.8;
+  margin-bottom: var(--space-md);
 }
 
-.about-panel__close {
-  position: absolute;
-  top: var(--space-lg);
-  right: var(--space-lg);
-  font-size: 2rem;
+/* Social icon links */
+.about-panel__socials {
+  display: flex;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+}
+
+/* Social icon buttons — based on Uiverse.io by vinodjangid07 */
+.about-panel__social {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
   color: var(--color-text-muted);
-  transition: color 0.3s;
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition-duration: 0.4s;
+  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.137);
 }
 
-.about-panel__close:hover { color: var(--color-text); }
+.about-panel__social svg {
+  transition: transform 0.3s ease, stroke 0.3s ease, fill 0.3s ease;
+}
+
+.about-panel__social:hover {
+  transform: translateY(-4px);
+  transition-duration: 0.4s;
+}
+
+.about-panel__social:hover svg {
+  transform: scale(1.1);
+  color: #fff;
+  stroke: #fff;
+}
+
+/* Tooltip — Uiverse.io styled, positioned below */
+.about-panel__tooltip {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition-duration: 0.3s;
+  pointer-events: none;
+  letter-spacing: 0.5px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
+  z-index: 20;
+}
+
+.about-panel__tooltip::before {
+  position: absolute;
+  content: "";
+  width: 10px;
+  height: 10px;
+  transform: rotate(45deg);
+  top: -4px;
+  left: calc(50% - 5px);
+  transition-duration: 0.3s;
+}
+
+.about-panel__social:hover .about-panel__tooltip {
+  top: calc(100% + 14px);
+  opacity: 1;
+  transition-duration: 0.3s;
+}
+
+/* Email brand colors (Uiverse style) */
+.about-panel__social[data-brand="email"]:hover {
+  background-color: #EA4335;
+  border: 2px solid #ffc2bd;
+  box-shadow: 0 4px 15px rgba(234, 67, 53, 0.45);
+}
+.about-panel__social[data-brand="email"] .about-panel__tooltip,
+.about-panel__social[data-brand="email"] .about-panel__tooltip::before {
+  background-color: #EA4335;
+}
+
+/* Instagram brand colors (Uiverse style) */
+.about-panel__social[data-brand="instagram"]:hover {
+  background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+  border: 2px solid #ffc0d8;
+  box-shadow: 0 4px 15px rgba(220, 39, 67, 0.45);
+}
+.about-panel__social[data-brand="instagram"] .about-panel__tooltip {
+  background: linear-gradient(45deg, #f09433, #dc2743, #bc1888);
+}
+.about-panel__social[data-brand="instagram"] .about-panel__tooltip::before {
+  background-color: #f09433;
+}
+
+/* LinkedIn brand colors (exact Uiverse #00acee / #bbecff style) */
+.about-panel__social[data-brand="linkedin"]:hover {
+  background-color: #0077b5;
+  border: 2px solid #bbecff;
+  box-shadow: 0 4px 15px rgba(0, 119, 181, 0.45);
+}
+.about-panel__social[data-brand="linkedin"] .about-panel__tooltip,
+.about-panel__social[data-brand="linkedin"] .about-panel__tooltip::before {
+  background-color: #0077b5;
+}
+
+/* GSAP reveal — elements start hidden */
+.about-reveal {
+  opacity: 0;
+  transform: translateY(25px);
+}
 
 /* ===================================================
    PROJECT PANEL
@@ -511,6 +674,18 @@ img { display: block; max-width: 100%; }
   }
   .loader__name {
     font-size: 9vw;
+  }
+  .about-panel__inner {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: var(--space-xl) var(--space-md);
+  }
+  .about-panel__photo-wrap {
+    width: 180px;
+  }
+  .about-panel__socials {
+    justify-content: center;
   }
 }
 

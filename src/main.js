@@ -632,16 +632,231 @@ function initFilters() {
    7.  ROUTING
    =================================================== */
 function initRouting() {
+  let aboutAnimated = false;
+  let photoTiltActive = false;
+
+  const headerName = document.querySelector('.header__name');
+  const aboutName = document.getElementById('about-name');
+  const photoWrap = document.querySelector('.about-panel__photo-wrap');
+  const photo = document.querySelector('.about-panel__photo');
+
+  // --- 3D photo tilt on mouse move ---
+  function onPhotoMove(e) {
+    if (!photoTiltActive || !photoWrap) return;
+    const rect = photoWrap.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;   // 0..1
+    const y = (e.clientY - rect.top) / rect.height;    // 0..1
+    const rotY = (x - 0.5) * 20;   // -10 to +10 deg
+    const rotX = (0.5 - y) * 20;   // -10 to +10 deg
+    gsap.to(photo, {
+      rotateX: rotX,
+      rotateY: rotY,
+      duration: 0.4,
+      ease: 'power2.out',
+      overwrite: 'auto',
+    });
+  }
+
+  function onPhotoLeave() {
+    gsap.to(photo, {
+      rotateX: 0,
+      rotateY: 0,
+      duration: 0.6,
+      ease: 'expo.out',
+      overwrite: 'auto',
+    });
+  }
+
+  if (photoWrap) {
+    photoWrap.addEventListener('mousemove', onPhotoMove);
+    photoWrap.addEventListener('mouseleave', onPhotoLeave);
+  }
+
+  function openAbout() {
+    if (aboutAnimated) {
+      aboutPanel.classList.add('is-open');
+      return;
+    }
+    aboutAnimated = true;
+    photoTiltActive = true;
+
+    // --- Crossfade FLIP (same technique as loader → header) ---
+    // Both elements share transformOrigin: '0% 50%' so they scale from the left edge
+
+    // 1. Measure header name (the "source")
+    const hRect = headerName.getBoundingClientRect();
+
+    // 2. Temporarily show panel to measure about name (the "destination")
+    aboutPanel.style.visibility = 'visible';
+    aboutPanel.style.opacity = '0';
+    aboutPanel.style.transition = 'none';
+    gsap.set(aboutName, { opacity: 1, x: 0, y: 0, scale: 1 });
+    const aRect = aboutName.getBoundingClientRect();
+
+    // 3. Lock transform origins
+    gsap.set([headerName, aboutName], { transformOrigin: '0% 50%' });
+
+    // Reference points (left edge, vertical center)
+    const hRefX = hRect.left;
+    const hRefY = hRect.top + hRect.height / 2;
+    const aRefX = aRect.left;
+    const aRefY = aRect.top + aRect.height / 2;
+
+    // 4. aboutName starts at headerName's position/size (scaled up from header)
+    const aboutStartScale = hRect.height / aRect.height;
+    const aboutStartX = hRefX - aRefX;
+    const aboutStartY = hRefY - aRefY;
+    gsap.set(aboutName, {
+      x: aboutStartX,
+      y: aboutStartY,
+      scale: aboutStartScale,
+      opacity: 0,
+    });
+
+    // 5. headerName will shrink and fly TO aboutName's position
+    const headerTargetScale = aRect.height / hRect.height;
+    const headerTargetX = aRefX - hRefX;
+    const headerTargetY = aRefY - hRefY;
+
+    // 6. Pre-set photo and reveals
+    gsap.set(photo, { scale: 1.3, clipPath: 'inset(100% 0% 0% 0%)' });
+    const reveals = aboutPanel.querySelectorAll('.about-reveal');
+    gsap.set(reveals, { opacity: 0, y: 25 });
+
+    // 7. Open the panel
+    aboutPanel.style.removeProperty('visibility');
+    aboutPanel.style.removeProperty('opacity');
+    aboutPanel.style.removeProperty('transition');
+    aboutPanel.classList.add('is-open');
+
+    // 8. Crossfade: aboutName grows in, headerName shrinks out (same path)
+    gsap.to(aboutName, {
+      x: 0, y: 0, scale: 1, opacity: 1,
+      duration: 1.2, ease: 'expo.inOut',
+    });
+
+    gsap.to(headerName, {
+      x: headerTargetX, y: headerTargetY, scale: headerTargetScale, opacity: 0,
+      duration: 1.2, ease: 'expo.inOut',
+      onComplete: () => {
+        gsap.set(headerName, { clearProps: 'transform' });
+        // opacity stays 0 — header name stays hidden while about is open
+      }
+    });
+
+    // Photo: clip-path wipe reveal + zoom out
+    gsap.to(photo, {
+      scale: 1, clipPath: 'inset(0% 0% 0% 0%)',
+      duration: 1.4, ease: 'expo.inOut', delay: 0.1,
+    });
+
+    // Staggered reveal for the rest
+    gsap.to(reveals, {
+      opacity: 1, y: 0,
+      duration: 1, stagger: 0.1, ease: 'expo.out', delay: 0.4,
+    });
+  }
+
+  function closeAbout() {
+    photoTiltActive = false;
+
+    if (!aboutAnimated) {
+      aboutPanel.classList.remove('is-open');
+      return;
+    }
+    aboutAnimated = false;
+
+    // --- Reverse crossfade FLIP ---
+    // 1. Measure both positions
+    const aRect = aboutName.getBoundingClientRect();
+
+    // We need the header's natural position — temporarily restore it
+    gsap.set(headerName, { clearProps: 'transform,opacity' });
+    gsap.set(headerName, { opacity: 1 });
+    const hRect = headerName.getBoundingClientRect();
+
+    // Lock transform origins
+    gsap.set([headerName, aboutName], { transformOrigin: '0% 50%' });
+
+    // Reference points
+    const hRefX = hRect.left;
+    const hRefY = hRect.top + hRect.height / 2;
+    const aRefX = aRect.left;
+    const aRefY = aRect.top + aRect.height / 2;
+
+    // 2. headerName starts at aboutName's position/size (scaled up)
+    const headerStartScale = aRect.height / hRect.height;
+    const headerStartX = aRefX - hRefX;
+    const headerStartY = aRefY - hRefY;
+    gsap.set(headerName, {
+      x: headerStartX,
+      y: headerStartY,
+      scale: headerStartScale,
+      opacity: 0,
+    });
+
+    // 3. aboutName will shrink and fly TO headerName's position
+    const aboutTargetScale = hRect.height / aRect.height;
+    const aboutTargetX = hRefX - aRefX;
+    const aboutTargetY = hRefY - aRefY;
+
+    // 4. Fade out reveals and photo
+    const reveals = aboutPanel.querySelectorAll('.about-reveal');
+    gsap.to(reveals, { opacity: 0, y: -15, duration: 0.4, ease: 'power2.in' });
+    gsap.to(photo, {
+      clipPath: 'inset(0% 0% 100% 0%)', scale: 1.1,
+      duration: 0.6, ease: 'power2.in',
+    });
+
+    // 5. Crossfade: aboutName shrinks out, headerName grows in (same path)
+    gsap.to(aboutName, {
+      x: aboutTargetX, y: aboutTargetY, scale: aboutTargetScale, opacity: 0,
+      duration: 1.2, ease: 'expo.inOut',
+    });
+
+    gsap.to(headerName, {
+      x: 0, y: 0, scale: 1, opacity: 1,
+      duration: 1.2, ease: 'expo.inOut',
+      onComplete: () => {
+        gsap.set(headerName, { clearProps: 'transform' });
+        // Clean up about panel — skip CSS transition, hide instantly
+        aboutPanel.style.transition = 'none';
+        aboutPanel.classList.remove('is-open');
+        gsap.set(aboutName, { opacity: 0, clearProps: 'x,y,scale,transformOrigin' });
+        gsap.set(photo, { clearProps: 'clipPath,scale,rotateX,rotateY' });
+        gsap.set(reveals, { opacity: 0, y: 25 });
+        gsap.set(backdrop, { clearProps: 'opacity' });
+        // Re-enable transition for next open
+        requestAnimationFrame(() => {
+          aboutPanel.style.removeProperty('transition');
+        });
+      }
+    });
+
+    // 6. Fade out backdrop
+    const backdrop = aboutPanel.querySelector('.about-panel__backdrop');
+    gsap.to(backdrop, { opacity: 0, duration: 0.8, ease: 'power2.inOut' });
+  }
+
   function handleHash() {
     const hash = window.location.hash || '#portfolio';
     header.querySelectorAll('.header__link').forEach((link) => {
       link.classList.toggle('active', link.getAttribute('href') === hash);
     });
-    aboutPanel.classList.toggle('is-open', hash === '#about');
+
+    if (hash === '#about') {
+      openAbout();
+    } else {
+      closeAbout();
+    }
   }
+
   window.addEventListener('hashchange', handleHash);
   handleHash();
+
+  // Click backdrop to close
   aboutClose.addEventListener('click', () => { window.location.hash = '#portfolio'; });
+
   if (projectClose) {
     projectClose.addEventListener('click', () => { projectPanel.classList.remove('is-open'); });
   }
