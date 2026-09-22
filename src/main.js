@@ -929,7 +929,6 @@ function openVideoDetail(video, { fromRoute = false } = {}) {
   gsap.set(metaEl, { opacity: 0 });
   gsap.set(metaItems, { opacity: 0 });
   const destRect = playerWrap.getBoundingClientRect();
-  const stacked = window.matchMedia('(max-width: 768px)').matches;
 
   const finishOpen = () => {
     viewState.transitioning = false;
@@ -951,15 +950,10 @@ function openVideoDetail(video, { fromRoute = false } = {}) {
     );
     gsap.fromTo(
       metaItems,
-      {
-        opacity: 0,
-        x: stacked ? 0 : -48,
-        y: stacked ? -36 : 0,
-      },
+      { opacity: 0, x: -48 },
       {
         opacity: 1,
         x: 0,
-        y: 0,
         duration: 0.65,
         stagger: 0.05,
         delay: 0.28,
@@ -998,8 +992,7 @@ function openVideoDetail(video, { fromRoute = false } = {}) {
   gsap.set(metaEl, { opacity: 1 });
   gsap.set(metaItems, {
     opacity: 0,
-    x: stacked ? 0 : -72,
-    y: stacked ? -48 : 0,
+    x: -72,
   });
 
   const tl = gsap.timeline({
@@ -1178,8 +1171,7 @@ function closeVideoDetail({ animate = true, fromRoute = false } = {}) {
       metaItems,
       {
         opacity: 0,
-        x: stacked ? 0 : -64,
-        y: stacked ? -36 : 0,
+        x: -64,
         duration: 0.35,
         stagger: { each: 0.03, from: 'end' },
         ease: 'power2.in',
@@ -1213,8 +1205,7 @@ function closeVideoDetail({ animate = true, fromRoute = false } = {}) {
 
   gsap.to(metaItems, {
     opacity: 0,
-    x: stacked ? 0 : -40,
-    y: stacked ? -24 : 0,
+    x: -40,
     duration: 0.3,
     stagger: { each: 0.03, from: 'end' },
     ease: 'power2.in',
@@ -1283,7 +1274,14 @@ function initKeyboard() {
    7. LOADER & PRELOADER
    =================================================== */
 function preloadAssets() {
+  const aboutPhotoSrcs = Array.from(
+    document.querySelectorAll('.about-panel__photo')
+  )
+    .map((img) => img.getAttribute('src'))
+    .filter(Boolean);
+
   const images = [
+    ...aboutPhotoSrcs,
     ...CATEGORIES.map((c) => c.cover),
     ...VIDEOS.map((v) => v.poster),
   ];
@@ -1477,31 +1475,31 @@ function initRouting() {
 
   const headerName = document.querySelector('.header__name');
   const photoWrap = document.querySelector('.about-panel__photo-wrap');
-  const photo = document.querySelector('.about-panel__photo');
+  const photoStack = document.querySelector('.about-panel__photo-stack');
+  const photo = photoStack || document.querySelector('.about-panel__photo');
   const cardFlipper = document.getElementById('about-flipper');
   const aboutCard = document.getElementById('about-card');
-  const flipBadge = document.getElementById('about-flip-badge');
 
   function getAboutTarget() {
-    const isMobile = window.innerWidth <= 768;
-    return isMobile
-      ? document.getElementById('about-name-mobile') || document.getElementById('about-name')
-      : document.getElementById('about-name');
+    return document.getElementById('about-name');
   }
 
+  // Flip card was mobile-only; About now matches desktop on all sizes
   if (cardFlipper) {
-    cardFlipper.addEventListener('click', (e) => {
-      if (window.innerWidth > 768) return;
-      if (e.target.closest('a, .about-panel__social')) return;
-      cardFlipper.classList.toggle('is-flipped');
-    });
+    cardFlipper.classList.remove('is-flipped');
   }
 
-  if (flipBadge) {
-    flipBadge.addEventListener('click', (e) => {
-      if (window.innerWidth > 768) return;
-      e.stopPropagation();
-      if (cardFlipper) cardFlipper.classList.toggle('is-flipped');
+  function setPhotoHover(active) {
+    if (!aboutPanel) return;
+    aboutPanel.classList.toggle('is-photo-hover', active);
+  }
+
+  if (photoWrap) {
+    photoWrap.addEventListener('mouseenter', () => setPhotoHover(true));
+    photoWrap.addEventListener('mouseleave', () => setPhotoHover(false));
+    photoWrap.addEventListener('focusin', () => setPhotoHover(true));
+    photoWrap.addEventListener('focusout', (e) => {
+      if (!photoWrap.contains(e.relatedTarget)) setPhotoHover(false);
     });
   }
 
@@ -1525,7 +1523,7 @@ function initRouting() {
   });
 
   function onPhotoMove(e) {
-    if (!photoTiltActive || !photoWrap || window.innerWidth <= 768) return;
+    if (!photoTiltActive || !photoWrap || !photo || window.innerWidth <= 768) return;
     const rect = photoWrap.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
@@ -1541,7 +1539,8 @@ function initRouting() {
   }
 
   function onPhotoLeave() {
-    if (window.innerWidth <= 768) return;
+    setPhotoHover(false);
+    if (!photo || window.innerWidth <= 768) return;
     gsap.to(photo, {
       rotateX: 0,
       rotateY: 0,
@@ -1657,6 +1656,7 @@ function initRouting() {
 
   function closeAbout() {
     photoTiltActive = false;
+    setPhotoHover(false);
 
     if (!aboutAnimated) {
       aboutPanel.classList.remove('is-open');
@@ -1741,6 +1741,7 @@ function initRouting() {
           aboutCard.removeAttribute('data-active-brand');
         }
         if (cardFlipper) cardFlipper.classList.remove('is-flipped');
+        setPhotoHover(false);
         gsap.set(aboutName, { opacity: 0, clearProps: 'x,y,scale,transformOrigin' });
         gsap.set(photo, { clearProps: 'clipPath,scale,rotateX,rotateY' });
         gsap.set(reveals, { opacity: 0, y: 25 });

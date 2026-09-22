@@ -6,16 +6,17 @@
     
     <!-- Meta tags for sharing (WhatsApp, iMessage, etc.) -->
     <meta property="og:title" content="YOSROFFSCRIPT" />
-    <meta property="og:description" content="Creative Director + Designer" />
+    <meta property="og:description" content="Visual Storyteller" />
     <meta property="og:image" content="/preview.png" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="/preview.png" />
     
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="/preview.png" />
+    <!-- Favicon — white Y on black -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
 
-    <title>YOSROFFSCRIPT</title>
+    <title>YOSROFFSCRIPT - Visual Storyteller</title>
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
@@ -26,7 +27,7 @@
           <h1 class="loader__name">
             <span class="loader__line"><span>YOSROFFSCRIPT</span></span>
           </h1>
-          <p class="loader__tagline"><span>Creative Director + Designer</span></p>
+          <p class="loader__tagline"><span>Visual Storyteller</span></p>
           <div class="loader__progress" id="loader-progress">0%</div>
           <p class="loader__cta" id="loader-cta"><span>Click or scroll to enter</span></p>
         </div>
@@ -79,7 +80,9 @@
 
       <!-- About panel -->
       <section class="about-panel" id="about-panel">
-        <div class="about-panel__backdrop" id="about-close"></div>
+        <div class="about-panel__backdrop" id="about-close">
+          <div class="about-panel__backdrop-glow" aria-hidden="true"></div>
+        </div>
         <div class="about-panel__inner">
 
           <!-- 3D FLIP CARD (Mobile interactive card / Desktop photo column) -->
@@ -89,8 +92,11 @@
 
               <!-- CARD FRONT (Mobile visual card / Desktop Left photo) -->
               <div class="about-card__front" id="about-card-front">
-                <div class="about-panel__photo-wrap about-reveal">
-                  <img class="about-panel__photo" src="/yosr.jpeg" alt="Yosr" />
+                <div class="about-panel__photo-wrap about-reveal" tabindex="0" aria-label="Yosr photo">
+                  <div class="about-panel__photo-stack">
+                    <img class="about-panel__photo about-panel__photo--base" src="/yosr.jpeg" alt="Yosr" />
+                    <img class="about-panel__photo about-panel__photo--color" src="/yosr_colorized.jpg" alt="" aria-hidden="true" />
+                  </div>
                   <div class="about-card__overlay"></div>
                 </div>
 
@@ -103,7 +109,7 @@
                   </div>
 
                   <h2 class="about-panel__name about-name-mobile" id="about-name-mobile">YOSROFFSCRIPT</h2>
-                  <p class="about-panel__role">Creative Director &amp; Designer</p>
+                  <p class="about-panel__role">Visual Storyteller</p>
                   <p class="about-card__tagline">Digital experiences, visual direction &amp; branding.</p>
 
                   <div class="about-panel__socials about-card__mobile-socials">
@@ -152,7 +158,7 @@
           <!-- DESKTOP CONTENT (Right Column on screens > 768px, Hidden on Mobile) -->
           <div class="about-panel__content about-desktop-content">
             <h2 class="about-panel__name" id="about-name">YOSROFFSCRIPT</h2>
-            <p class="about-panel__role about-reveal">Creative Director &amp; Designer</p>
+            <p class="about-panel__role about-reveal">Visual Storyteller</p>
 
             <p class="about-panel__bio about-reveal">
               Multidisciplinary creative director with a focus on branding, editorial design, and women (im gay). I believe in the power of restraint, letting the work breathe, stripping away the unnecessary, and finding beauty in simplicity and women bardo 3ady.

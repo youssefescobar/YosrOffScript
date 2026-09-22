@@ -688,7 +688,40 @@ img, video { display: block; max-width: 100%; }
   inset: 0;
   background: rgba(0, 0, 0, 0.92);
   backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   cursor: pointer;
+  overflow: hidden;
+  transition: background 0.7s var(--ease-out-expo);
+}
+
+.about-panel__backdrop-glow {
+  position: absolute;
+  inset: -18%;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(196, 168, 132, 0.28) 0%,
+      rgba(90, 110, 130, 0.12) 42%,
+      rgba(0, 0, 0, 0.55) 100%
+    ),
+    url('/yosr_colorized.jpg') center 20% / cover no-repeat;
+  filter: blur(72px) saturate(1.35) brightness(0.55);
+  opacity: 0;
+  transform: scale(1.08);
+  pointer-events: none;
+  transition:
+    opacity 0.75s var(--ease-out-expo),
+    transform 0.9s var(--ease-out-expo);
+  will-change: opacity, transform;
+}
+
+.about-panel.is-photo-hover .about-panel__backdrop {
+  background: rgba(8, 6, 4, 0.78);
+}
+
+.about-panel.is-photo-hover .about-panel__backdrop-glow {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .about-panel__inner {
@@ -741,21 +774,56 @@ img, video { display: block; max-width: 100%; }
   border: 1px solid var(--card-hue-border, rgba(255, 255, 255, 0.1));
   box-shadow: var(--card-hue-glow, none);
   transition: border-color 0.5s ease, box-shadow 0.5s ease;
+  cursor: pointer;
+}
+
+.about-panel__photo-stack {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  transform-origin: center center;
+  will-change: transform;
 }
 
 .about-panel__photo {
   width: 100%;
   aspect-ratio: 3 / 4;
   object-fit: cover;
+  object-position: center 18%;
   display: block;
-  filter: grayscale(0.6) brightness(0.85) contrast(1.05);
-  transition: filter 0.6s var(--ease-out-expo);
   transform-origin: center center;
-  will-change: transform;
 }
 
-.about-panel__photo-wrap:hover .about-panel__photo {
-  filter: grayscale(0) brightness(1) contrast(1);
+.about-panel__photo--base {
+  filter: grayscale(0.7) brightness(0.82) contrast(1.05);
+  transition: filter 0.7s var(--ease-out-expo);
+}
+
+.about-panel__photo--color {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  filter: brightness(1.02) contrast(1.02) saturate(1.05);
+  transition: opacity 0.7s var(--ease-out-expo);
+  pointer-events: none;
+}
+
+.about-panel.is-photo-hover .about-panel__photo--base,
+.about-panel__photo-wrap:hover .about-panel__photo--base {
+  filter: grayscale(0.15) brightness(0.95) contrast(1.02);
+}
+
+.about-panel.is-photo-hover .about-panel__photo--color,
+.about-panel__photo-wrap:hover .about-panel__photo--color {
+  opacity: 1;
+}
+
+.about-panel.is-photo-hover .about-panel__photo-wrap,
+.about-panel__photo-wrap:hover {
+  border-color: rgba(200, 184, 168, 0.35);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45), 0 0 40px rgba(196, 168, 132, 0.12);
 }
 
 .about-panel__content {
@@ -1080,7 +1148,7 @@ img, video { display: block; max-width: 100%; }
 }
 
 /* ===================================================
-   MOBILE
+   MOBILE — keep portrait grids + desktop-like compositions
    =================================================== */
 @media (max-width: 1100px) {
   .category-view {
@@ -1091,17 +1159,32 @@ img, video { display: block; max-width: 100%; }
 
   .category-card {
     max-height: min(42vh, 420px);
-    aspect-ratio: 4 / 5;
+    aspect-ratio: 3 / 4;
   }
 
   .video-grid {
     grid-template-columns: repeat(3, 1fr);
+  }
+
+  .about-panel__inner {
+    max-width: 820px;
+    gap: var(--space-lg);
+    padding: var(--space-lg);
+  }
+
+  .about-card,
+  .about-panel__photo-wrap {
+    width: 220px;
   }
 }
 
 @media (max-width: 768px) {
   .header {
     padding: var(--space-sm) var(--space-md);
+  }
+
+  .header__name {
+    font-size: 0.7rem;
   }
 
   .footer {
@@ -1130,6 +1213,7 @@ img, video { display: block; max-width: 100%; }
 
   .loader__name { font-size: 9vw; }
 
+  /* Categories — 2×2 portrait, never single-stack / landscape */
   .category-view {
     grid-template-columns: 1fr 1fr;
     gap: 8px;
@@ -1138,7 +1222,7 @@ img, video { display: block; max-width: 100%; }
   }
 
   .category-card {
-    max-height: none;
+    max-height: min(38vh, 360px);
     aspect-ratio: 3 / 4;
     border-radius: 10px;
   }
@@ -1146,7 +1230,7 @@ img, video { display: block; max-width: 100%; }
   .category-card__overlay { padding: 14px 12px; }
 
   .category-card__label {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
   }
 
   .video-view__header {
@@ -1173,24 +1257,35 @@ img, video { display: block; max-width: 100%; }
     font-size: clamp(0.85rem, 3.2vw, 1.05rem);
   }
 
+  /* Detail — side-by-side like desktop, not stacked */
   .project-panel {
     padding: var(--space-md);
-    align-items: flex-start;
-    padding-top: calc(var(--header-h) + 12px);
+    align-items: center;
   }
 
   .project-panel__inner {
-    grid-template-columns: 1fr;
-    gap: var(--space-lg);
+    grid-template-columns: minmax(140px, 42vw) minmax(0, 1fr);
+    gap: var(--space-md);
     max-width: 100%;
+    align-items: center;
   }
 
   .project-panel__player-slot {
-    max-width: min(280px, 72vw);
+    max-width: min(200px, 42vw);
+    margin: 0;
   }
 
   .project-panel__video {
-    max-height: min(58vh, 520px);
+    max-height: min(62vh, 480px);
+  }
+
+  .project-panel__title {
+    font-size: clamp(1.25rem, 5vw, 1.85rem);
+  }
+
+  .project-panel__desc {
+    font-size: 0.85rem;
+    max-width: none;
   }
 
   .project-panel__close {
@@ -1198,12 +1293,12 @@ img, video { display: block; max-width: 100%; }
     right: var(--space-md);
   }
 
-  /* About — sleeker mobile flip card */
-  .about-desktop-content { display: none !important; }
+  /* About — same photo + copy layout as web */
+  .about-desktop-content { display: block !important; }
 
   .about-card__front-info,
   .about-card__back,
-  .about-card__overlay { display: block; }
+  .about-card__overlay { display: none !important; }
 
   .about-panel {
     align-items: center;
@@ -1212,292 +1307,106 @@ img, video { display: block; max-width: 100%; }
   }
 
   .about-panel__inner {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 18px;
     padding: 0;
     width: 100%;
-    max-width: 380px;
-    margin: auto;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    max-width: 560px;
+    margin: 0 auto;
   }
 
   .about-card {
-    width: 100%;
-    max-width: 360px;
-    height: clamp(520px, 78vh, 640px);
-    perspective: 1200px;
-    -webkit-perspective: 1200px;
-    position: relative;
-    cursor: pointer;
-    overflow: visible;
-    -webkit-tap-highlight-color: transparent;
+    width: 148px;
+    flex-shrink: 0;
+    height: auto;
+    max-width: none;
+    cursor: default;
+    perspective: none;
   }
 
   .about-card__flipper {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    transform-style: preserve-3d;
-    -webkit-transform-style: preserve-3d;
-    transition: transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
-    overflow: visible;
+    transform: none !important;
+    transition: none;
   }
 
-  .about-card__flipper.is-flipped { transform: rotateY(180deg); }
-
-  .about-card__front,
-  .about-card__back {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    border-radius: 22px;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    border: 1px solid var(--card-hue-border, rgba(255, 255, 255, 0.14));
-    box-shadow:
-      0 24px 60px rgba(0, 0, 0, 0.75),
-      0 0 0 1px rgba(255, 255, 255, 0.04),
-      var(--card-hue-glow, 0 0 0 transparent);
-    transition: border-color 0.5s ease, box-shadow 0.5s ease;
+  .about-panel__photo-wrap {
+    width: 148px;
   }
 
-  .about-card__front {
-    background: #000;
-    overflow: visible;
-    transform: rotateY(0deg);
-    -webkit-transform: rotateY(0deg);
-  }
-
-  .about-card__front .about-panel__photo-wrap {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    border-radius: 21px;
-    overflow: hidden;
-    perspective: none;
-    border: none;
-    box-shadow: none;
-  }
-
-  .about-card__front .about-panel__photo {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    filter: grayscale(0.15) brightness(0.88) contrast(1.05);
-  }
-
-  .about-card__overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.05) 0%,
-      rgba(0, 0, 0, 0.1) 35%,
-      rgba(0, 0, 0, 0.55) 58%,
-      rgba(0, 0, 0, 0.9) 78%,
-      rgba(0, 0, 0, 0.98) 100%
-    );
-    pointer-events: none;
-  }
-
-  .about-card__front-info {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    padding: 28px 22px 26px;
-    z-index: 2;
-    text-align: left;
-    pointer-events: none;
-    overflow: visible;
-  }
-
-  .about-card__front-info > * { pointer-events: auto; }
-
-  .about-card__flip-badge {
-    position: absolute;
-    top: 18px;
-    right: 18px;
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    padding: 8px 14px;
-    border-radius: 100px;
-    background: rgba(14, 14, 18, 0.62);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    font-size: 0.58rem;
-    font-weight: 500;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.92);
-    cursor: pointer;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s, border-color 0.3s;
-    user-select: none;
-  }
-
-  .about-card__flip-badge:active {
-    transform: scale(1.04);
-    border-color: var(--color-accent);
-  }
-
-  .about-card__flip-badge svg {
-    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    opacity: 0.8;
-  }
-
-  .about-card__flip-badge:active svg {
-    transform: rotate(180deg);
-    opacity: 1;
-  }
-
-  .about-card__flip-dot {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--color-accent);
-    box-shadow: 0 0 8px var(--color-accent);
-    animation: pulseDot 2s ease-in-out infinite alternate;
-  }
-
-  @keyframes pulseDot {
-    0% { opacity: 0.6; transform: scale(0.9); }
-    100% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 12px var(--color-accent); }
-  }
-
-  .about-card__front-info .about-panel__name {
-    font-size: clamp(1.75rem, 7vw, 2.35rem);
-    font-weight: 300;
-    letter-spacing: -0.03em;
-    text-transform: uppercase;
-    line-height: 1.05;
-    margin-bottom: 6px;
-    color: #fff;
-  }
-
-  .about-card__front-info .about-panel__role {
-    font-size: 0.68rem;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--color-accent);
-    margin-bottom: 10px;
-  }
-
-  .about-card__tagline {
-    font-size: 0.88rem;
-    line-height: 1.5;
-    color: rgba(255, 255, 255, 0.72);
-    margin-bottom: 20px;
-    max-width: 28ch;
-  }
-
-  .about-card__mobile-socials {
-    margin-top: 0;
-    gap: 14px;
-  }
-
-  .about-card__mobile-socials .about-panel__social {
-    width: 44px;
-    height: 44px;
-  }
-
-  .about-card__back {
-    transform: rotateY(180deg);
-    -webkit-transform: rotateY(180deg);
-    background: linear-gradient(165deg, #141418 0%, #09090b 100%);
-    padding: 26px 22px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    text-align: left;
-    overflow: hidden;
-  }
-
-  .about-card__back-header {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    margin-bottom: 18px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  .about-card__back-badge {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-size: 0.58rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--color-accent);
-    font-weight: 500;
-  }
-
-  .about-card__back-dot {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--color-accent);
-    box-shadow: 0 0 6px var(--color-accent);
-  }
-
-  .about-card__back-content {
+  .about-panel__content {
     flex: 1;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-right: 4px;
+    min-width: 0;
+    padding-top: 2px;
   }
 
-  .about-card__back-heading {
-    font-size: 1.45rem;
-    font-weight: 300;
-    letter-spacing: -0.02em;
-    margin-bottom: 14px;
-    color: #fff;
+  .about-panel__name {
+    font-size: clamp(1.35rem, 6vw, 1.85rem);
+    margin-bottom: 6px;
   }
 
-  .about-card__back-content .about-panel__bio {
-    font-size: 0.88rem;
-    line-height: 1.65;
-    color: rgba(232, 228, 223, 0.62);
+  .about-panel__role {
+    font-size: 0.65rem;
     margin-bottom: 14px;
   }
 
-  .about-card__tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 18px;
+  .about-panel__bio {
+    font-size: 0.82rem;
+    line-height: 1.6;
+    margin-bottom: 12px;
   }
 
-  .about-card__tags span {
-    font-size: 0.58rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--color-accent);
-    background: rgba(200, 184, 168, 0.08);
-    border: 1px solid rgba(200, 184, 168, 0.22);
-    padding: 6px 12px;
-    border-radius: 100px;
+  .about-panel__socials {
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  .about-panel__social {
+    width: 40px;
+    height: 40px;
+  }
+
+  .about-panel__tooltip {
+    display: none;
   }
 }
 
 @media (max-width: 480px) {
+  /* Still 2-up portrait — never collapse to stacked landscape cards */
   .category-view {
-    grid-template-columns: 1fr;
-    gap: 10px;
-    overflow-y: auto;
-    align-content: start;
-    padding-top: calc(var(--header-h) + 16px);
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    align-content: center;
+    overflow: hidden;
+    padding: calc(var(--header-h) + 12px) 10px calc(var(--footer-h) + 12px);
   }
 
   .category-card {
-    aspect-ratio: 16 / 10;
+    aspect-ratio: 3 / 4;
+    max-height: min(36vh, 320px);
+  }
+
+  .about-panel__inner {
+    gap: 14px;
     max-width: 100%;
+  }
+
+  .about-card,
+  .about-panel__photo-wrap {
+    width: 120px;
+  }
+
+  .project-panel__inner {
+    grid-template-columns: minmax(120px, 38vw) minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .project-panel__player-slot {
+    max-width: min(160px, 38vw);
+  }
+
+  .project-panel__fullscreen {
+    padding: 8px 12px;
+    font-size: 0.55rem;
   }
 }
