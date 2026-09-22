@@ -1204,7 +1204,7 @@ img, video { display: block; max-width: 100%; }
 
   .loader__name { font-size: 9vw; }
 
-  /* Categories — 2×2 portrait, never single-stack / landscape */
+  /* Categories — 2×2 portrait */
   .category-view {
     grid-template-columns: 1fr 1fr;
     gap: 8px;
@@ -1224,15 +1224,32 @@ img, video { display: block; max-width: 100%; }
     font-size: 0.9rem;
   }
 
+  /* Category title sits below main nav — not colliding with Portfolio/About */
   .video-view__header {
-    height: var(--header-h);
-    top: 0;
+    top: var(--header-h);
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.72) 0%,
+      rgba(0, 0, 0, 0.25) 70%,
+      transparent 100%
+    );
+  }
+
+  .video-view__title {
+    font-size: 0.62rem;
+    letter-spacing: 0.22em;
+    color: rgba(232, 228, 223, 0.72);
   }
 
   .video-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 0;
-    padding: 0 0 10px;
+    padding: calc(var(--header-h) + 40px) 0 calc(var(--footer-h) + 8px);
+    scroll-padding-top: calc(var(--header-h) + 40px);
+    scroll-padding-bottom: calc(var(--footer-h) + 8px);
   }
 
   .video-card {
@@ -1240,11 +1257,27 @@ img, video { display: block; max-width: 100%; }
     aspect-ratio: 4 / 5;
   }
 
-  .video-card__title {
-    font-size: clamp(0.9rem, 3.2vw, 1.15rem);
+  .video-card__meta-inner {
+    max-width: min(88%, 160px);
   }
 
-  /* Detail — side-by-side like desktop, not stacked */
+  .video-card__brand {
+    font-size: 0.48rem;
+    letter-spacing: 0.16em;
+    margin-bottom: 5px;
+  }
+
+  .video-card__title {
+    font-size: clamp(0.72rem, 2.8vw, 0.88rem);
+    letter-spacing: 0.04em;
+    line-height: 1.15;
+  }
+
+  .video-card.is-hover .video-card__meta-inner {
+    max-width: min(92%, 180px);
+  }
+
+  /* Detail — side-by-side */
   .project-panel {
     padding: var(--space-md);
     align-items: center;
@@ -1280,7 +1313,9 @@ img, video { display: block; max-width: 100%; }
     right: var(--space-md);
   }
 
-  /* About — same photo + copy layout as web */
+  /* ===================================================
+     ABOUT — mobile editorial (full-bleed portrait + story)
+     =================================================== */
   .about-desktop-content { display: block !important; }
 
   .about-card__front-info,
@@ -1288,28 +1323,42 @@ img, video { display: block; max-width: 100%; }
   .about-card__overlay { display: none !important; }
 
   .about-panel {
-    align-items: center;
-    justify-content: center;
-    padding: max(12px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+    align-items: stretch;
+    justify-content: flex-start;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0;
+    background: #000;
+  }
+
+  .about-panel__backdrop {
+    background: #000;
   }
 
   .about-panel__inner {
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 18px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
     padding: 0;
     width: 100%;
-    max-width: 560px;
-    margin: 0 auto;
+    max-width: 100%;
+    margin: 0;
+    min-height: 100%;
+    background: #000;
   }
 
   .about-card {
-    width: 148px;
+    width: 100%;
     flex-shrink: 0;
     height: auto;
     max-width: none;
     cursor: default;
     perspective: none;
+  }
+
+  .about-card__aura {
+    display: none;
   }
 
   .about-card__flipper {
@@ -1318,39 +1367,112 @@ img, video { display: block; max-width: 100%; }
   }
 
   .about-panel__photo-wrap {
-    width: 148px;
+    width: 100%;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    perspective: none;
+    overflow: hidden;
+  }
+
+  .about-panel.is-photo-hover .about-panel__photo-wrap,
+  .about-panel__photo-wrap:hover {
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  .about-panel__photo-stack {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    max-height: min(72vh, 640px);
+    /* Soft bleed only at the bottom — keep most of the portrait visible */
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      #000 0%,
+      #000 62%,
+      rgba(0, 0, 0, 0.85) 78%,
+      rgba(0, 0, 0, 0.4) 90%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      #000 0%,
+      #000 62%,
+      rgba(0, 0, 0, 0.85) 78%,
+      rgba(0, 0, 0, 0.4) 90%,
+      transparent 100%
+    );
+  }
+
+  .about-panel__photo {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    aspect-ratio: auto;
+    object-fit: cover;
+    object-position: center 22%;
+  }
+
+  .about-panel__photo-wrap::after {
+    display: none;
   }
 
   .about-panel__content {
     flex: 1;
     min-width: 0;
-    padding-top: 2px;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0 22px 0;
+    margin-top: -56px;
+    position: relative;
+    z-index: 3;
+    background: transparent;
   }
 
   .about-panel__name {
-    font-size: clamp(1.35rem, 6vw, 1.85rem);
-    margin-bottom: 6px;
+    font-size: clamp(1.85rem, 9vw, 2.6rem);
+    margin-bottom: 8px;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
   }
 
   .about-panel__role {
-    font-size: 0.65rem;
-    margin-bottom: 14px;
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    margin-bottom: 22px;
+    color: var(--color-accent);
   }
 
   .about-panel__bio {
-    font-size: 0.82rem;
-    line-height: 1.6;
-    margin-bottom: 12px;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    margin-bottom: 16px;
+    color: rgba(232, 228, 223, 0.78);
+    max-width: 36ch;
+  }
+
+  .about-panel__bio + .about-panel__bio {
+    margin-bottom: 28px;
   }
 
   .about-panel__socials {
-    gap: 10px;
-    margin-top: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 12px;
+    margin-bottom: 0;
+    padding: 0 0 calc(72px + env(safe-area-inset-bottom));
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    position: relative;
+    z-index: 4;
   }
 
   .about-panel__social {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
   }
 
   .about-panel__tooltip {
@@ -1359,7 +1481,6 @@ img, video { display: block; max-width: 100%; }
 }
 
 @media (max-width: 480px) {
-  /* Still 2-up portrait — never collapse to stacked landscape cards */
   .category-view {
     grid-template-columns: 1fr 1fr;
     gap: 8px;
@@ -1373,14 +1494,21 @@ img, video { display: block; max-width: 100%; }
     max-height: min(36vh, 320px);
   }
 
-  .about-panel__inner {
-    gap: 14px;
-    max-width: 100%;
+  .video-card__title {
+    font-size: 0.7rem;
   }
 
-  .about-card,
-  .about-panel__photo-wrap {
-    width: 120px;
+  .about-panel__photo-stack {
+    max-height: min(68vh, 580px);
+  }
+
+  .about-panel__content {
+    padding: 0 18px 0;
+    margin-top: -48px;
+  }
+
+  .about-panel__socials {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
   }
 
   .project-panel__inner {
