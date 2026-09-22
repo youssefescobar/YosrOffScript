@@ -20,9 +20,9 @@
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
   --z-canvas: 1;
-  --z-header: 20;
   --z-footer: 20;
   --z-about: 30;
+  --z-header: 35;
   --z-project: 40;
   --z-ghost: 50;
   --z-loader: 100;
@@ -802,20 +802,33 @@ img, video { display: block; max-width: 100%; }
   pointer-events: none;
 }
 
-.about-panel.is-photo-hover .about-panel__photo--base,
-.about-panel__photo-wrap:hover .about-panel__photo--base {
+.about-panel.is-photo-hover .about-panel__photo--base {
   filter: grayscale(0.15) brightness(0.95) contrast(1.02);
 }
 
-.about-panel.is-photo-hover .about-panel__photo--color,
-.about-panel__photo-wrap:hover .about-panel__photo--color {
+.about-panel.is-photo-hover .about-panel__photo--color {
   opacity: 1;
 }
 
-.about-panel.is-photo-hover .about-panel__photo-wrap,
-.about-panel__photo-wrap:hover {
+.about-panel.is-photo-hover .about-panel__photo-wrap {
   border-color: rgba(200, 184, 168, 0.35);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45), 0 0 40px rgba(196, 168, 132, 0.12);
+}
+
+/* Desktop only — avoid iOS sticky :hover locking colorize on */
+@media (hover: hover) and (pointer: fine) {
+  .about-panel__photo-wrap:hover .about-panel__photo--base {
+    filter: grayscale(0.15) brightness(0.95) contrast(1.02);
+  }
+
+  .about-panel__photo-wrap:hover .about-panel__photo--color {
+    opacity: 1;
+  }
+
+  .about-panel__photo-wrap:hover {
+    border-color: rgba(200, 184, 168, 0.35);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45), 0 0 40px rgba(196, 168, 132, 0.12);
+  }
 }
 
 .about-panel__content {
@@ -1369,8 +1382,7 @@ img, video { display: block; max-width: 100%; }
     overflow: hidden;
   }
 
-  .about-panel.is-photo-hover .about-panel__photo-wrap,
-  .about-panel__photo-wrap:hover {
+  .about-panel.is-photo-hover .about-panel__photo-wrap {
     border-color: transparent;
     box-shadow: none;
   }

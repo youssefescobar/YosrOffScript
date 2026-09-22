@@ -1430,6 +1430,55 @@ function initKeyboard() {
 /* ===================================================
    7. LOADER & PRELOADER
    =================================================== */
+const MIN_LOADER_MS = 3600;
+const HOLD_AT_FULL_MS = 700;
+
+function unique(list) {
+  return [...new Set(list.filter(Boolean))];
+}
+
+function loadImageAsset(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.decoding = 'async';
+    const finish = () => resolve(src);
+    img.onload = () => {
+      if (img.decode) {
+        img.decode().then(finish).catch(finish);
+      } else {
+        finish();
+      }
+    };
+    img.onerror = finish;
+    img.src = src;
+  });
+}
+
+function loadVideoAsset(src) {
+  return new Promise((resolve) => {
+    const video = document.createElement('video');
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = 'auto';
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      video.removeAttribute('src');
+      try {
+        video.load();
+      } catch (_) {}
+      resolve(src);
+    };
+    video.addEventListener('loadeddata', finish, { once: true });
+    video.addEventListener('error', finish, { once: true });
+    // Don't let one slow CDN stall forever
+    setTimeout(finish, 14000);
+    video.src = src;
+    video.load();
+  });
+}
+
 function preloadAssets() {
   const aboutPhotoSrcs = Array.from(
     document.querySelectorAll('.about-panel__photo')
@@ -1437,16 +1486,19 @@ function preloadAssets() {
     .map((img) => img.getAttribute('src'))
     .filter(Boolean);
 
-  const images = [
+  const imageSrcs = unique([
     ...aboutPhotoSrcs,
     ...CATEGORIES.map((c) => c.cover),
     ...VIDEOS.map((v) => v.poster),
-  ];
-  let loadedCount = 0;
-  const total = images.length;
+    '/preview.png',
+    '/favicon.svg',
+  ]);
+
+  const videoSrcs = unique(VIDEOS.map((v) => v.src));
 
   const progressEl = document.getElementById('loader-progress');
   const ctaEl = document.getElementById('loader-cta');
+  const startedAt = performance.now();
 
   gsap.set('.header__nav', { opacity: 0, y: -30 });
   gsap.set('.footer', { opacity: 0, y: 30 });
@@ -1459,25 +1511,91 @@ function preloadAssets() {
     .to('.loader__tagline > span', { y: '0%', duration: 0.8 }, '-=0.5')
     .to(progressEl, { opacity: 1, duration: 0.5 }, '-=0.3');
 
-  let isReady = false;
+  // Weighted progress: images dominate, then film warm-up, then fonts
+  const weights = {
+    images: 0.55,
+    videos: 0.35,
+    fonts: 0.1,
+  };
+  const state = {
+    images: 0,
+    videos: 0,
+    fonts: 0,
+  };
 
-  function checkReady() {
-    if (loadedCount >= total && !isReady) {
-      isReady = true;
-      document.fonts.ready.then(() => {
-        if (tl.isActive()) {
-          tl.eventCallback('onComplete', () => hideProgressAndShowCTA());
-        } else {
-          hideProgressAndShowCTA();
-        }
-      });
+  let displayProgress = 0;
+  let targetProgress = 0;
+  let progressRaf = 0;
+  let unlocked = false;
+
+  function computeTarget() {
+    return Math.min(
+      100,
+      (state.images * weights.images +
+        state.videos * weights.videos +
+        state.fonts * weights.fonts) *
+        100
+    );
+  }
+
+  function paintProgress() {
+    displayProgress += (targetProgress - displayProgress) * 0.07;
+    if (Math.abs(targetProgress - displayProgress) < 0.15) {
+      displayProgress = targetProgress;
+    }
+    if (progressEl) {
+      progressEl.textContent = `${Math.floor(displayProgress)}%`;
+    }
+    if (displayProgress < 99.9 || targetProgress < 100) {
+      progressRaf = requestAnimationFrame(paintProgress);
+    } else if (progressEl) {
+      progressEl.textContent = '100%';
+    }
+  }
+  progressRaf = requestAnimationFrame(paintProgress);
+
+  function syncProgress() {
+    targetProgress = computeTarget();
+  }
+
+  async function finishWhenReady() {
+    if (unlocked) return;
+    // Wait until weighted load is complete
+    while (computeTarget() < 99.5) {
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    targetProgress = 100;
+
+    const elapsed = performance.now() - startedAt;
+    const waitMore = Math.max(0, MIN_LOADER_MS - elapsed);
+    await new Promise((r) => setTimeout(r, waitMore));
+
+    // Let the % ease up to 100, then hold a beat
+    await new Promise((r) => {
+      const check = () => {
+        if (displayProgress >= 99.5) r();
+        else requestAnimationFrame(check);
+      };
+      check();
+    });
+    await new Promise((r) => setTimeout(r, HOLD_AT_FULL_MS));
+
+    if (unlocked) return;
+    unlocked = true;
+    cancelAnimationFrame(progressRaf);
+
+    const reveal = () => hideProgressAndShowCTA();
+    if (tl.isActive()) {
+      tl.eventCallback('onComplete', reveal);
+    } else {
+      reveal();
     }
   }
 
   function hideProgressAndShowCTA() {
     gsap.to(progressEl, {
       opacity: 0,
-      duration: 0.4,
+      duration: 0.45,
       onComplete: () => {
         ctaEl.classList.add('is-ready');
         playLoader();
@@ -1485,24 +1603,39 @@ function preloadAssets() {
     });
   }
 
-  if (total === 0) {
-    checkReady();
-  } else {
-    images.forEach((src) => {
-      const img = new Image();
-      img.onload = () => {
-        loadedCount++;
-        const percent = Math.floor((loadedCount / total) * 100);
-        if (progressEl) progressEl.innerText = `${percent}%`;
-        checkReady();
-      };
-      img.onerror = () => {
-        loadedCount++;
-        checkReady();
-      };
-      img.src = src;
+  // Kick off work in parallel
+  (async () => {
+    const imageJobs = imageSrcs.map(async (src) => {
+      await loadImageAsset(src);
+      state.images += 1 / Math.max(imageSrcs.length, 1);
+      syncProgress();
     });
-  }
+
+    const videoJobs = videoSrcs.map(async (src) => {
+      await loadVideoAsset(src);
+      state.videos += 1 / Math.max(videoSrcs.length, 1);
+      syncProgress();
+    });
+
+    const fontJob = document.fonts.ready
+      .then(() => {
+        state.fonts = 1;
+        syncProgress();
+      })
+      .catch(() => {
+        state.fonts = 1;
+        syncProgress();
+      });
+
+    await Promise.allSettled([...imageJobs, ...videoJobs, fontJob]);
+
+    // Safety: force remaining bars full if a counter drifted
+    state.images = 1;
+    state.videos = 1;
+    state.fonts = 1;
+    syncProgress();
+    finishWhenReady();
+  })();
 }
 
 function playLoader() {
@@ -1648,7 +1781,11 @@ function initRouting() {
 
   function setPhotoHover(active) {
     if (!aboutPanel) return;
-    aboutPanel.classList.toggle('is-photo-hover', active);
+    aboutPanel.classList.toggle('is-photo-hover', !!active);
+  }
+
+  function togglePhotoColor() {
+    setPhotoHover(!aboutPanel.classList.contains('is-photo-hover'));
   }
 
   if (photoWrap) {
@@ -1719,17 +1856,45 @@ function initRouting() {
     photoWrap.addEventListener('mousemove', onPhotoMove);
     photoWrap.addEventListener('mouseleave', onPhotoLeave);
 
-    // Mobile: tap portrait to colorize / restore
-    photoWrap.addEventListener('click', (e) => {
-      if (!isTouchUi()) return;
+    // Mobile: tap cycles colorize ↔ muted (pointerup avoids sticky-hover bugs)
+    let photoTapStart = null;
+    photoWrap.addEventListener(
+      'pointerdown',
+      (e) => {
+        if (e.pointerType === 'mouse') return;
+        photoTapStart = { x: e.clientX, y: e.clientY };
+      },
+      { passive: true }
+    );
+    photoWrap.addEventListener(
+      'pointermove',
+      (e) => {
+        if (!photoTapStart || e.pointerType === 'mouse') return;
+        if (
+          Math.abs(e.clientX - photoTapStart.x) > 12 ||
+          Math.abs(e.clientY - photoTapStart.y) > 12
+        ) {
+          photoTapStart = null;
+        }
+      },
+      { passive: true }
+    );
+    photoWrap.addEventListener('pointerup', (e) => {
+      if (e.pointerType === 'mouse' || !photoTapStart) return;
+      photoTapStart = null;
+      e.preventDefault();
       e.stopPropagation();
-      setPhotoHover(!aboutPanel.classList.contains('is-photo-hover'));
+      togglePhotoColor();
+    });
+    photoWrap.addEventListener('pointercancel', () => {
+      photoTapStart = null;
     });
   }
 
   function openAbout() {
     if (aboutAnimated) {
       aboutPanel.classList.add('is-open');
+      gsap.set(headerName, { opacity: 0, visibility: 'hidden' });
       return;
     }
     aboutAnimated = true;
@@ -1804,7 +1969,12 @@ function initRouting() {
       duration: openDuration,
       ease: 'expo.inOut',
       onComplete: () => {
-        gsap.set(headerName, { clearProps: 'transform' });
+        // Brand lives in About now — keep it out of the nav until close
+        gsap.set(headerName, {
+          clearProps: 'transform',
+          opacity: 0,
+          visibility: 'hidden',
+        });
       },
     });
 
@@ -1851,8 +2021,9 @@ function initRouting() {
 
     const aRect = aboutName.getBoundingClientRect();
 
-    gsap.set(headerName, { clearProps: 'transform,opacity' });
-    gsap.set(headerName, { opacity: 1 });
+    // Bring nav brand back for the reverse morph into the header
+    gsap.set(headerName, { clearProps: 'transform,opacity,visibility' });
+    gsap.set(headerName, { opacity: 1, visibility: 'visible' });
     const hRect = headerName.getBoundingClientRect();
 
     gsap.set([headerName, aboutName], { transformOrigin: '0% 50%' });
@@ -1905,7 +2076,7 @@ function initRouting() {
       duration: closeDuration,
       ease: closeEase,
       onComplete: () => {
-        gsap.set(headerName, { clearProps: 'transform' });
+        gsap.set(headerName, { clearProps: 'transform,opacity,visibility' });
         aboutPanel.style.transition = 'none';
         aboutPanel.classList.remove('is-open');
         if (aboutCard) {
