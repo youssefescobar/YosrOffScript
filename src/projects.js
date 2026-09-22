@@ -48,7 +48,7 @@ export const VIDEOS = [
     category: 'branding',
     brand: 'Aurora',
     description: 'A brand film exploring light, texture, and identity across a new visual system.',
-    poster: 'https://picsum.photos/seed/v1/1280/720',
+    poster: 'https://picsum.photos/seed/v1/900/1200',
     src: SAMPLE.bunny,
   },
   {
@@ -57,7 +57,7 @@ export const VIDEOS = [
     category: 'branding',
     brand: 'Folio',
     description: 'Quiet stationery motion for a rebrand — restraint, paper grain, and typography.',
-    poster: 'https://picsum.photos/seed/v2/1280/720',
+    poster: 'https://picsum.photos/seed/v2/900/1200',
     src: SAMPLE.blazes,
   },
   {
@@ -66,7 +66,7 @@ export const VIDEOS = [
     category: 'branding',
     brand: null,
     description: 'Identity motion study without a named client — pure mark and motion.',
-    poster: 'https://picsum.photos/seed/v3/1280/720',
+    poster: 'https://picsum.photos/seed/v3/900/1200',
     src: SAMPLE.escapes,
   },
   {
@@ -75,7 +75,7 @@ export const VIDEOS = [
     category: 'branding',
     brand: 'Meridian',
     description: 'Campaign opener built around negative space and slow reveals.',
-    poster: 'https://picsum.photos/seed/v4/1280/720',
+    poster: 'https://picsum.photos/seed/v4/900/1200',
     src: SAMPLE.fun,
   },
 
@@ -86,7 +86,7 @@ export const VIDEOS = [
     category: 'editorial',
     brand: 'Vesper',
     description: 'Editorial sequence for a fashion issue — color, gesture, and tempo.',
-    poster: 'https://picsum.photos/seed/v5/1280/720',
+    poster: 'https://picsum.photos/seed/v5/900/1200',
     src: SAMPLE.elephants,
   },
   {
@@ -95,7 +95,7 @@ export const VIDEOS = [
     category: 'editorial',
     brand: 'Atelier',
     description: 'Portrait-driven short with rhythm edits and grain.',
-    poster: 'https://picsum.photos/seed/v6/1280/720',
+    poster: 'https://picsum.photos/seed/v6/900/1200',
     src: SAMPLE.joyrides,
   },
   {
@@ -103,7 +103,7 @@ export const VIDEOS = [
     title: 'Chromatic',
     category: 'editorial',
     description: 'Color-story reel cut for print and digital companion coverage.',
-    poster: 'https://picsum.photos/seed/v7/1280/720',
+    poster: 'https://picsum.photos/seed/v7/900/1200',
     src: SAMPLE.meltdowns,
   },
   {
@@ -112,7 +112,7 @@ export const VIDEOS = [
     category: 'editorial',
     brand: 'Stone & Co',
     description: 'Still-life motion for a materials feature — tactile, slow, precise.',
-    poster: 'https://picsum.photos/seed/v8/1280/720',
+    poster: 'https://picsum.photos/seed/v8/900/1200',
     src: SAMPLE.sintel,
   },
 
@@ -123,7 +123,7 @@ export const VIDEOS = [
     category: 'digital',
     brand: 'Orbit',
     description: 'Product launch loop designed for social and landing hero use.',
-    poster: 'https://picsum.photos/seed/v9/1280/720',
+    poster: 'https://picsum.photos/seed/v9/900/1200',
     src: SAMPLE.subaru,
   },
   {
@@ -132,7 +132,7 @@ export const VIDEOS = [
     category: 'digital',
     brand: 'Nexus',
     description: 'UI motion language — glass, depth, and micro-interactions.',
-    poster: 'https://picsum.photos/seed/v10/1280/720',
+    poster: 'https://picsum.photos/seed/v10/900/1200',
     src: SAMPLE.tears,
   },
   {
@@ -141,7 +141,7 @@ export const VIDEOS = [
     category: 'digital',
     brand: null,
     description: 'Experimental digital piece exploring fluid transitions.',
-    poster: 'https://picsum.photos/seed/v11/1280/720',
+    poster: 'https://picsum.photos/seed/v11/900/1200',
     src: SAMPLE.bunny,
   },
   {
@@ -150,7 +150,7 @@ export const VIDEOS = [
     category: 'digital',
     brand: 'Layer',
     description: 'Scroll-native motion concept packaged as a standalone reel.',
-    poster: 'https://picsum.photos/seed/v12/1280/720',
+    poster: 'https://picsum.photos/seed/v12/900/1200',
     src: SAMPLE.blazes,
   },
 
@@ -161,7 +161,7 @@ export const VIDEOS = [
     category: 'motion',
     brand: 'Kinetic',
     description: 'Abstract title sequence with soft forms and hard cuts.',
-    poster: 'https://picsum.photos/seed/v13/1280/720',
+    poster: 'https://picsum.photos/seed/v13/900/1200',
     src: SAMPLE.escapes,
   },
   {
@@ -170,7 +170,7 @@ export const VIDEOS = [
     category: 'motion',
     brand: 'Horizon',
     description: 'Travel-toned motion piece — horizon lines and paced reveals.',
-    poster: 'https://picsum.photos/seed/v14/1280/720',
+    poster: 'https://picsum.photos/seed/v14/900/1200',
     src: SAMPLE.fun,
   },
   {
@@ -178,7 +178,7 @@ export const VIDEOS = [
     title: 'Phantom Thread',
     category: 'motion',
     description: 'Texture-forward motion study without a brand lockup.',
-    poster: 'https://picsum.photos/seed/v15/1280/720',
+    poster: 'https://picsum.photos/seed/v15/900/1200',
     src: SAMPLE.joyrides,
   },
   {
@@ -187,7 +187,7 @@ export const VIDEOS = [
     category: 'motion',
     brand: 'Lumen',
     description: 'Closing sequence built on bloom, trail, and afterimage.',
-    poster: 'https://picsum.photos/seed/v16/1280/720',
+    poster: 'https://picsum.photos/seed/v16/900/1200',
     src: SAMPLE.sintel,
   },
 ];

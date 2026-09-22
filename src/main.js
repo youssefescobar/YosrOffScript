@@ -39,8 +39,111 @@ const viewState = {
   detailVideoEl: null,
 };
 
+const routing = {
+  ready: false,
+  applying: false,
+  bootHash: '#portfolio',
+  intent: { fromFilter: false, filterBtn: null },
+};
+
 let loaderDone = false;
 let categoryCards = [];
+
+/* About open/close — assigned inside initRouting */
+let openAboutFn = () => {};
+let closeAboutFn = () => {};
+
+/* ---------- Hash routing ---------- */
+function normalizeHash(hash) {
+  const h = (hash || '').trim();
+  if (!h || h === '#') return '#portfolio';
+  return h.startsWith('#') ? h : `#${h}`;
+}
+
+function getHash() {
+  return normalizeHash(window.location.hash);
+}
+
+function parseRoute(hash = getHash()) {
+  const path = normalizeHash(hash).slice(1);
+  if (path === 'about') return { screen: 'about' };
+
+  const parts = path.split('/');
+  if (parts[0] === 'portfolio' && parts[1]) {
+    const cat = getCategory(parts[1]);
+    if (cat) return { screen: 'videos', category: parts[1] };
+  }
+
+  return { screen: 'categories' };
+}
+
+function updateNav(route) {
+  if (!header) return;
+  header.querySelectorAll('.header__link').forEach((link) => {
+    const href = link.getAttribute('href');
+    const isAboutLink = href === '#about';
+    link.classList.toggle(
+      'active',
+      isAboutLink ? route.screen === 'about' : route.screen !== 'about'
+    );
+  });
+}
+
+function setHash(hash, { replace = false } = {}) {
+  const target = normalizeHash(hash);
+  if (getHash() === target) {
+    applyRoute();
+    return;
+  }
+  if (replace) {
+    history.replaceState(null, '', target);
+  } else {
+    history.pushState(null, '', target);
+  }
+  applyRoute();
+}
+
+function applyRoute() {
+  if (!routing.ready || routing.applying) return;
+  routing.applying = true;
+
+  const route = parseRoute();
+  updateNav(route);
+
+  try {
+    if (route.screen === 'about') {
+      openAboutFn();
+      return;
+    }
+
+    closeAboutFn();
+
+    if (viewState.mode === 'detail') {
+      closeVideoDetail(false);
+    }
+
+    if (route.screen === 'videos') {
+      const intent = routing.intent;
+      routing.intent = { fromFilter: false, filterBtn: null };
+      enterCategory(route.category, {
+        fromFilter: intent.fromFilter && viewState.mode === 'categories',
+        filterBtn: intent.filterBtn,
+      });
+    } else if (viewState.mode === 'videos' || viewState.mode === 'detail') {
+      exitToCategories();
+    }
+  } finally {
+    // Release on next frame so nested hash sync can't re-enter mid-apply
+    requestAnimationFrame(() => {
+      routing.applying = false;
+    });
+  }
+}
+
+function onBrowserRouteChange() {
+  if (!routing.ready) return;
+  applyRoute();
+}
 
 /* ===================================================
    1. CATEGORY LANDING
@@ -62,7 +165,10 @@ function buildCategoryView() {
         <span class="category-card__count">${count} films</span>
       </div>
     `;
-    el.addEventListener('click', () => enterCategory(cat.id, { fromFilter: false }));
+    el.addEventListener('click', () => {
+      routing.intent = { fromFilter: false, filterBtn: null };
+      setHash(`#portfolio/${cat.id}`);
+    });
     categoryView.appendChild(el);
     categoryCards.push(el);
   });
@@ -362,7 +468,7 @@ function openVideoView(categoryId, focusCard) {
   updateFooterForVideos(categoryId);
 
   const cards = videoGrid.querySelectorAll('.video-card');
-  gsap.set(cards, { opacity: 0, y: 30 });
+  gsap.set(cards, { opacity: 0, y: 40, scale: 0.94 });
   gsap.set(videoView, { opacity: 0 });
 
   const tl = gsap.timeline({
@@ -370,6 +476,7 @@ function openVideoView(categoryId, focusCard) {
       viewState.transitioning = false;
       if (focusCard) focusCard.classList.remove('is-focus');
       gsap.set(categoryCards, { clearProps: 'opacity,scale,x,y' });
+      gsap.set(cards, { clearProps: 'opacity,y,scale' });
     },
   });
 
@@ -406,11 +513,12 @@ function openVideoView(categoryId, focusCard) {
       {
         opacity: 1,
         y: 0,
-        duration: 0.7,
-        stagger: 0.06,
+        scale: 1,
+        duration: 0.75,
+        stagger: 0.07,
         ease: 'expo.out',
       },
-      '-=0.15'
+      '-=0.12'
     );
 }
 
@@ -482,7 +590,7 @@ function exitToCategories() {
 }
 
 /* ===================================================
-   3. VIDEO GRID (McKinnon-style)
+   3. VIDEO GRID — portrait flush + idle ambient loops
    =================================================== */
 function populateVideoGrid(categoryId, animate = false) {
   const videos = getVideosByCategory(categoryId);
@@ -508,30 +616,42 @@ function populateVideoGrid(categoryId, animate = false) {
           muted
           loop
           playsinline
-          preload="metadata"
+          preload="auto"
           poster="${video.poster}"
         ></video>
       </div>
       <div class="video-card__meta">
-        ${brandHtml}
-        <h3 class="video-card__title">${video.title}</h3>
+        <div class="video-card__meta-inner">
+          ${brandHtml}
+          <h3 class="video-card__title">${video.title}</h3>
+        </div>
       </div>
     `;
 
     const videoEl = card.querySelector('.video-card__video');
 
-    card.addEventListener('mouseenter', () => playPreview(card, videoEl));
-    card.addEventListener('mouseleave', () => stopPreview(card, videoEl));
-    card.addEventListener('focus', () => playPreview(card, videoEl));
-    card.addEventListener('blur', () => stopPreview(card, videoEl));
+    // Idle ambient sample — always looping softly under the title
+    const tryIdlePlay = () => startIdleLoop(card, videoEl);
+    if (videoEl.readyState >= 2) {
+      tryIdlePlay();
+    } else {
+      videoEl.addEventListener('loadeddata', tryIdlePlay, { once: true });
+    }
 
-    // Mobile: first tap previews, second opens
+    card.addEventListener('mouseenter', () => setCardHover(card, true));
+    card.addEventListener('mouseleave', () => setCardHover(card, false));
+    card.addEventListener('focus', () => setCardHover(card, true));
+    card.addEventListener('blur', () => setCardHover(card, false));
+
+    // Mobile: first tap reveals (hover state), second opens
     card.addEventListener('click', (e) => {
       const isTouch = window.matchMedia('(hover: none)').matches;
-      if (isTouch && !card.classList.contains('is-previewing')) {
+      if (isTouch && !card.classList.contains('is-hover')) {
         e.preventDefault();
-        stopAllPreviews();
-        playPreview(card, videoEl);
+        videoGrid.querySelectorAll('.video-card.is-hover').forEach((c) => {
+          if (c !== card) setCardHover(c, false);
+        });
+        setCardHover(card, true);
         return;
       }
       openVideoDetail(video);
@@ -551,46 +671,119 @@ function populateVideoGrid(categoryId, animate = false) {
     const cards = videoGrid.querySelectorAll('.video-card');
     gsap.fromTo(
       cards,
-      { opacity: 0, y: 24 },
-      { opacity: 1, y: 0, duration: 0.55, stagger: 0.05, ease: 'expo.out' }
+      { opacity: 0, y: 28, scale: 0.94 },
+      { opacity: 1, y: 0, scale: 1, duration: 0.55, stagger: 0.05, ease: 'expo.out' }
     );
   }
 }
 
-function playPreview(card, videoEl) {
+function startIdleLoop(card, videoEl) {
   if (!videoEl) return;
-  if (viewState.playingVideo && viewState.playingVideo !== videoEl) {
-    stopPreview(
-      viewState.playingVideo.closest('.video-card'),
-      viewState.playingVideo
-    );
-  }
-  card.classList.add('is-previewing');
-  viewState.playingVideo = videoEl;
+  // Keep a short ambient sample feel — start near the head of the clip
+  try {
+    if (videoEl.currentTime > 6) videoEl.currentTime = 0;
+  } catch (_) {}
   const playPromise = videoEl.play();
   if (playPromise && typeof playPromise.catch === 'function') {
-    playPromise.catch(() => {});
+    playPromise
+      .then(() => card.classList.add('is-playing'))
+      .catch(() => {});
+  } else {
+    card.classList.add('is-playing');
   }
 }
 
-function stopPreview(card, videoEl) {
-  if (card) card.classList.remove('is-previewing');
-  if (videoEl) {
-    videoEl.pause();
-    try {
-      videoEl.currentTime = 0;
-    } catch (_) {}
+function setCardHover(card, on) {
+  const inner = card.querySelector('.video-card__meta-inner');
+  const title = card.querySelector('.video-card__title');
+  const brand = card.querySelector('.video-card__brand');
+  const wantHover = !!on;
+
+  if (card.classList.contains('is-hover') === wantHover) return;
+
+  if (!inner) {
+    card.classList.toggle('is-hover', wantHover);
+    return;
   }
-  if (viewState.playingVideo === videoEl) {
-    viewState.playingVideo = null;
-  }
+
+  // FLIP: measure → swap layout → invert → play (brand + title travel together)
+  const first = inner.getBoundingClientRect();
+  const firstTitle = title ? title.getBoundingClientRect() : null;
+  const firstBrand = brand ? brand.getBoundingClientRect() : null;
+
+  card.classList.toggle('is-hover', wantHover);
+
+  const last = inner.getBoundingClientRect();
+  const lastTitle = title ? title.getBoundingClientRect() : null;
+  const lastBrand = brand ? brand.getBoundingClientRect() : null;
+
+  const dx = first.left - last.left;
+  const dy = first.top - last.top;
+  const sx = first.width / Math.max(last.width, 1);
+  const sy = first.height / Math.max(last.height, 1);
+
+  gsap.killTweensOf([inner, title, brand].filter(Boolean));
+
+  gsap.fromTo(
+    inner,
+    {
+      x: dx,
+      y: dy,
+      scaleX: sx,
+      scaleY: sy,
+      transformOrigin: '0% 0%',
+    },
+    {
+      x: 0,
+      y: 0,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 0.95,
+      ease: 'expo.inOut',
+      overwrite: true,
+      onComplete: () => {
+        gsap.set(inner, { clearProps: 'transform' });
+      },
+    }
+  );
+
+  // Counter-scale type so it doesn't look stretched while the block moves
+  const flipType = (el, firstRect, lastRect) => {
+    if (!el || !firstRect || !lastRect) return;
+    const tsx = (firstRect.width / Math.max(lastRect.width, 1)) / sx;
+    const tsy = (firstRect.height / Math.max(lastRect.height, 1)) / sy;
+    gsap.fromTo(
+      el,
+      { scaleX: tsx, scaleY: tsy, transformOrigin: '0% 0%' },
+      {
+        scaleX: 1,
+        scaleY: 1,
+        duration: 0.95,
+        ease: 'expo.inOut',
+        overwrite: true,
+        onComplete: () => {
+          gsap.set(el, { clearProps: 'transform' });
+        },
+      }
+    );
+  };
+
+  flipType(title, firstTitle, lastTitle);
+  flipType(brand, firstBrand, lastBrand);
 }
 
 function stopAllPreviews() {
   videoGrid.querySelectorAll('.video-card').forEach((card) => {
     const v = card.querySelector('.video-card__video');
-    stopPreview(card, v);
+    card.classList.remove('is-hover', 'is-playing', 'is-previewing');
+    if (v) {
+      v.pause();
+      try {
+        v.currentTime = 0;
+      } catch (_) {}
+    }
   });
+  viewState.playingVideo = null;
 }
 
 /* ===================================================
@@ -693,14 +886,17 @@ function initFilters() {
   document.querySelectorAll('.filter-btn[data-filter]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const filter = btn.dataset.filter;
-      enterCategory(filter, {
+      routing.intent = {
         fromFilter: viewState.mode === 'categories',
         filterBtn: btn,
-      });
+      };
+      setHash(`#portfolio/${filter}`);
     });
   });
 
-  filterBack.addEventListener('click', () => exitToCategories());
+  filterBack.addEventListener('click', () => {
+    setHash('#portfolio');
+  });
 }
 
 /* ===================================================
@@ -712,7 +908,9 @@ function initKeyboard() {
       if (viewState.mode === 'detail') {
         closeVideoDetail();
       } else if (viewState.mode === 'videos') {
-        exitToCategories();
+        setHash('#portfolio');
+      } else if ((getHash() === '#about')) {
+        setHash('#portfolio');
       }
     }
   });
@@ -865,6 +1063,15 @@ function playLoader() {
         loader.style.display = 'none';
         gsap.set(headerName, { clearProps: 'transform,opacity' });
         gsap.set('.header', { clearProps: 'zIndex' });
+
+        // Enable routing only after intro settles — then honor deep link
+        routing.ready = true;
+        const boot = routing.bootHash;
+        if (boot === '#about' || boot.startsWith('#portfolio/')) {
+          setTimeout(() => setHash(boot, { replace: true }), 200);
+        } else {
+          updateNav(parseRoute('#portfolio'));
+        }
       },
     });
 
@@ -1187,43 +1394,32 @@ function initRouting() {
     gsap.to(backdrop, { opacity: 0, duration: backdropDuration, ease: 'power2.inOut' });
   }
 
-  function handleHash() {
-    const hash = window.location.hash || '#portfolio';
-    header.querySelectorAll('.header__link').forEach((link) => {
-      link.classList.toggle('active', link.getAttribute('href') === hash);
-    });
+  openAboutFn = openAbout;
+  closeAboutFn = closeAbout;
 
-    if (hash === '#about') {
-      openAbout();
-    } else {
-      closeAbout();
-      // Portfolio nav also resets to categories if deep in videos
-      if (hash === '#portfolio' && viewState.mode === 'videos' && !viewState.transitioning) {
-        // stay in videos unless user explicitly wants home — only exit if coming from about
-      }
-    }
-  }
+  // Browser back / forward / hash links
+  window.addEventListener('hashchange', onBrowserRouteChange);
+  window.addEventListener('popstate', onBrowserRouteChange);
 
-  window.addEventListener('hashchange', handleHash);
-  handleHash();
-
-  aboutClose.addEventListener('click', () => {
-    window.location.hash = '#portfolio';
+  aboutClose.addEventListener('click', (e) => {
+    e.preventDefault();
+    setHash('#portfolio');
   });
 
-  // Portfolio link: if already on portfolio and in videos, go back to categories
   const portfolioLink = header.querySelector('a[href="#portfolio"]');
   if (portfolioLink) {
     portfolioLink.addEventListener('click', (e) => {
-      if ((window.location.hash || '#portfolio') === '#portfolio') {
-        if (viewState.mode === 'detail') {
-          e.preventDefault();
-          closeVideoDetail();
-        } else if (viewState.mode === 'videos') {
-          e.preventDefault();
-          exitToCategories();
-        }
-      }
+      e.preventDefault();
+      if (viewState.mode === 'detail') closeVideoDetail();
+      setHash('#portfolio');
+    });
+  }
+
+  const aboutLink = header.querySelector('a[href="#about"]');
+  if (aboutLink) {
+    aboutLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      setHash('#about');
     });
   }
 
@@ -1240,10 +1436,17 @@ function initRouting() {
    INIT
    =================================================== */
 function init() {
+  // Remember deep link, but park on #portfolio so About can't open during loader
+  routing.bootHash = normalizeHash(window.location.hash);
+  if (routing.bootHash !== '#portfolio') {
+    history.replaceState(null, '', '#portfolio');
+  }
+
   buildCategoryView();
   initFilters();
   initKeyboard();
   initRouting();
+  updateNav(parseRoute('#portfolio'));
   preloadAssets();
 }
 
