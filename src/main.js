@@ -8,6 +8,7 @@ import {
   VIDEOS,
   getVideosByCategory,
   getCategory,
+  getVideo,
 } from './projects.js';
 
 gsap.registerPlugin(Observer);
@@ -34,6 +35,7 @@ const flipGhost = document.getElementById('flip-ghost');
 const viewState = {
   mode: 'categories', // 'categories' | 'videos' | 'detail'
   activeCategory: null,
+  activeVideoId: null,
   transitioning: false,
   playingVideo: null,
   detailVideoEl: null,
@@ -43,7 +45,7 @@ const routing = {
   ready: false,
   applying: false,
   bootHash: '#portfolio',
-  intent: { fromFilter: false, filterBtn: null },
+  intent: { fromFilter: false, filterBtn: null, sourceCard: null },
 };
 
 let loaderDone = false;
@@ -71,7 +73,19 @@ function parseRoute(hash = getHash()) {
   const parts = path.split('/');
   if (parts[0] === 'portfolio' && parts[1]) {
     const cat = getCategory(parts[1]);
-    if (cat) return { screen: 'videos', category: parts[1] };
+    if (cat) {
+      if (parts[2]) {
+        const video = getVideo(parts[2]);
+        if (video && video.category === cat.id) {
+          return {
+            screen: 'detail',
+            category: cat.id,
+            videoId: video.id,
+          };
+        }
+      }
+      return { screen: 'videos', category: cat.id };
+    }
   }
 
   return { screen: 'categories' };
@@ -112,32 +126,66 @@ function applyRoute() {
 
   try {
     if (route.screen === 'about') {
+      if (viewState.mode === 'detail') closeVideoDetail({ animate: true, fromRoute: true });
       openAboutFn();
       return;
     }
 
     closeAboutFn();
 
+    if (route.screen === 'detail') {
+      ensureCategoryLayer(route.category);
+      const video = getVideo(route.videoId);
+      if (video) {
+        openVideoDetail(video, { fromRoute: true });
+      } else {
+        setHash(`#portfolio/${route.category}`, { replace: true });
+      }
+      return;
+    }
+
+    // Leaving detail → category film grid
     if (viewState.mode === 'detail') {
-      closeVideoDetail(false);
+      const stayingOnCategory =
+        route.screen === 'videos' && viewState.activeCategory === route.category;
+      closeVideoDetail({ animate: true, fromRoute: true });
+      if (stayingOnCategory) return;
     }
 
     if (route.screen === 'videos') {
       const intent = routing.intent;
-      routing.intent = { fromFilter: false, filterBtn: null };
+      routing.intent = { fromFilter: false, filterBtn: null, sourceCard: null };
       enterCategory(route.category, {
         fromFilter: intent.fromFilter && viewState.mode === 'categories',
         filterBtn: intent.filterBtn,
       });
-    } else if (viewState.mode === 'videos' || viewState.mode === 'detail') {
+    } else if (viewState.mode === 'videos') {
       exitToCategories();
     }
   } finally {
-    // Release on next frame so nested hash sync can't re-enter mid-apply
     requestAnimationFrame(() => {
       routing.applying = false;
     });
   }
+}
+
+/** Instantly sync the videos layer under a detail overlay (deep links / back). */
+function ensureCategoryLayer(categoryId) {
+  if (
+    viewState.activeCategory === categoryId &&
+    (viewState.mode === 'videos' || viewState.mode === 'detail')
+  ) {
+    return;
+  }
+
+  categoryView.hidden = true;
+  gsap.set(categoryView, { clearProps: 'opacity' });
+  videoView.hidden = false;
+  gsap.set(videoView, { opacity: 1 });
+  populateVideoGrid(categoryId, false);
+  viewState.activeCategory = categoryId;
+  if (viewState.mode !== 'detail') viewState.mode = 'videos';
+  updateFooterForVideos(categoryId);
 }
 
 function onBrowserRouteChange() {
@@ -166,7 +214,7 @@ function buildCategoryView() {
       </div>
     `;
     el.addEventListener('click', () => {
-      routing.intent = { fromFilter: false, filterBtn: null };
+      routing.intent = { fromFilter: false, filterBtn: null, sourceCard: null };
       setHash(`#portfolio/${cat.id}`);
     });
     categoryView.appendChild(el);
@@ -524,7 +572,7 @@ function openVideoView(categoryId, focusCard) {
 
 function exitToCategories() {
   if (viewState.transitioning || viewState.mode === 'categories') return;
-  if (viewState.mode === 'detail') closeVideoDetail(false);
+  if (viewState.mode === 'detail') closeVideoDetail({ animate: false, fromRoute: true });
 
   viewState.transitioning = true;
   stopAllPreviews();
@@ -654,13 +702,15 @@ function populateVideoGrid(categoryId, animate = false) {
         setCardHover(card, true);
         return;
       }
-      openVideoDetail(video);
+      routing.intent.sourceCard = card;
+      setHash(`#portfolio/${video.category}/${video.id}`);
     });
 
     card.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        openVideoDetail(video);
+        routing.intent.sourceCard = card;
+        setHash(`#portfolio/${video.category}/${video.id}`);
       }
     });
 
@@ -789,35 +839,66 @@ function stopAllPreviews() {
 /* ===================================================
    4. VIDEO DETAIL OVERLAY
    =================================================== */
-function openVideoDetail(video) {
+function findVideoCard(videoId) {
+  if (!videoId || !videoGrid) return null;
+  return videoGrid.querySelector(`.video-card[data-video-id="${videoId}"]`);
+}
+
+function openVideoDetail(video, { fromRoute = false } = {}) {
   if (!projectPanel || !video) return;
+
+  // Navigation entry point — hash drives the open
+  if (!fromRoute) {
+    setHash(`#portfolio/${video.category}/${video.id}`);
+    return;
+  }
+
+  if (viewState.mode === 'detail' && viewState.activeVideoId === video.id) {
+    return;
+  }
+
   stopAllPreviews();
   viewState.mode = 'detail';
+  viewState.activeVideoId = video.id;
+  viewState.activeCategory = video.category;
+  viewState.transitioning = true;
+
+  const sourceCard =
+    routing.intent.sourceCard || findVideoCard(video.id);
+  routing.intent.sourceCard = null;
+  const sourceRect = sourceCard ? sourceCard.getBoundingClientRect() : null;
+
+  if (sourceCard) {
+    gsap.set(sourceCard, { opacity: 0, pointerEvents: 'none' });
+    sourceCard.classList.add('is-detail-source');
+  }
 
   const brandHtml = video.brand
-    ? `<span class="project-panel__brand">${video.brand}</span>`
+    ? `<span class="project-panel__brand project-panel__meta-item">${video.brand}</span>`
     : '';
 
   const cat = getCategory(video.category);
 
   projectInner.innerHTML = `
-    <div class="project-panel__player-wrap">
-      <video
-        class="project-panel__video"
-        id="detail-video"
-        src="${video.src}"
-        poster="${video.poster}"
-        controls
-        playsinline
-        autoplay
-      ></video>
+    <div class="project-panel__player-slot" id="detail-player-slot">
+      <div class="project-panel__player-wrap" id="detail-player">
+        <video
+          class="project-panel__video"
+          id="detail-video"
+          src="${video.src}"
+          poster="${video.poster}"
+          controls
+          playsinline
+          autoplay
+        ></video>
+      </div>
     </div>
-    <div class="project-panel__meta">
+    <div class="project-panel__meta" id="detail-meta">
       ${brandHtml}
-      <h2 class="project-panel__title">${video.title}</h2>
-      <div class="project-panel__category">${cat ? cat.label : video.category}</div>
-      <p class="project-panel__desc">${video.description || ''}</p>
-      <button class="project-panel__fullscreen" id="detail-fullscreen" type="button">
+      <h2 class="project-panel__title project-panel__meta-item">${video.title}</h2>
+      <div class="project-panel__category project-panel__meta-item">${cat ? cat.label : video.category}</div>
+      <p class="project-panel__desc project-panel__meta-item">${video.description || ''}</p>
+      <button class="project-panel__fullscreen project-panel__meta-item" id="detail-fullscreen" type="button">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
         <span>View fullscreen</span>
       </button>
@@ -825,6 +906,12 @@ function openVideoDetail(video) {
   `;
 
   const detailVideo = document.getElementById('detail-video');
+  const playerSlot = document.getElementById('detail-player-slot');
+  const playerWrap = document.getElementById('detail-player');
+  const metaEl = document.getElementById('detail-meta');
+  const metaItems = metaEl
+    ? Array.from(metaEl.querySelectorAll('.project-panel__meta-item'))
+    : [];
   viewState.detailVideoEl = detailVideo;
 
   const fsBtn = document.getElementById('detail-fullscreen');
@@ -835,11 +922,156 @@ function openVideoDetail(video) {
   projectPanel.setAttribute('aria-hidden', 'false');
   projectPanel.classList.add('is-open');
 
-  gsap.fromTo(
-    projectInner,
-    { opacity: 0, y: 28, scale: 0.97 },
-    { opacity: 1, y: 0, scale: 1, duration: 0.65, ease: 'expo.out' }
+  gsap.killTweensOf([projectPanel, projectInner, playerWrap, metaEl, ...metaItems]);
+
+  // Measure final layout while panel is invisible
+  gsap.set(projectPanel, { opacity: 0, visibility: 'visible' });
+  gsap.set(metaEl, { opacity: 0 });
+  gsap.set(metaItems, { opacity: 0 });
+  const destRect = playerWrap.getBoundingClientRect();
+  const stacked = window.matchMedia('(max-width: 768px)').matches;
+
+  const finishOpen = () => {
+    viewState.transitioning = false;
+  };
+
+  // Deep link / no source card — softer fallback
+  if (!sourceRect || sourceRect.width < 8) {
+    gsap.set(playerWrap, { clearProps: 'all' });
+    playerWrap.classList.remove('is-flying');
+    gsap.fromTo(
+      projectPanel,
+      { opacity: 0 },
+      { opacity: 1, duration: 0.4, ease: 'power2.out', overwrite: true }
+    );
+    gsap.fromTo(
+      playerWrap,
+      { opacity: 0, scale: 0.92, y: 24 },
+      { opacity: 1, scale: 1, y: 0, duration: 0.7, ease: 'expo.out', overwrite: true }
+    );
+    gsap.fromTo(
+      metaItems,
+      {
+        opacity: 0,
+        x: stacked ? 0 : -48,
+        y: stacked ? -36 : 0,
+      },
+      {
+        opacity: 1,
+        x: 0,
+        y: 0,
+        duration: 0.65,
+        stagger: 0.05,
+        delay: 0.28,
+        ease: 'power3.out',
+        overwrite: true,
+        onComplete: finishOpen,
+      }
+    );
+    gsap.set(metaEl, { opacity: 1 });
+    return;
+  }
+
+  // Hold layout space while the player flies fixed
+  if (playerSlot) {
+    gsap.set(playerSlot, {
+      width: destRect.width,
+      height: destRect.height,
+    });
+  }
+
+  // Card → front → left video, text emerges from behind
+  playerWrap.classList.add('is-flying');
+  gsap.set(playerWrap, {
+    position: 'fixed',
+    top: sourceRect.top,
+    left: sourceRect.left,
+    width: sourceRect.width,
+    height: sourceRect.height,
+    margin: 0,
+    maxWidth: 'none',
+    borderRadius: 0,
+    zIndex: 60,
+    boxShadow: '0 8px 28px rgba(0,0,0,0.35)',
+    opacity: 1,
+  });
+  gsap.set(metaEl, { opacity: 1 });
+  gsap.set(metaItems, {
+    opacity: 0,
+    x: stacked ? 0 : -72,
+    y: stacked ? -48 : 0,
+  });
+
+  const tl = gsap.timeline({
+    defaults: { overwrite: true },
+    onComplete: finishOpen,
+  });
+
+  tl.to(
+    projectPanel,
+    { opacity: 1, duration: 0.45, ease: 'power2.out' },
+    0
   );
+
+  // Bring card forward
+  tl.to(
+    playerWrap,
+    {
+      scale: 1.045,
+      boxShadow: '0 28px 70px rgba(0,0,0,0.55)',
+      duration: 0.32,
+      ease: 'power2.out',
+    },
+    0.05
+  );
+
+  // Morph into detail player on the left
+  tl.to(
+    playerWrap,
+    {
+      top: destRect.top,
+      left: destRect.left,
+      width: destRect.width,
+      height: destRect.height,
+      borderRadius: 12,
+      scale: 1,
+      boxShadow: '0 24px 60px rgba(0,0,0,0.55)',
+      duration: 0.85,
+      ease: 'power3.inOut',
+      onComplete: () => {
+        playerWrap.classList.remove('is-flying');
+        gsap.set(playerWrap, {
+          clearProps:
+            'position,top,left,width,height,margin,maxWidth,zIndex,scale,boxShadow,borderRadius',
+        });
+        if (playerSlot) {
+          gsap.set(playerSlot, { clearProps: 'width,height' });
+        }
+      },
+    },
+    0.28
+  );
+
+  // Text slides out from behind the card
+  tl.to(
+    metaItems,
+    {
+      opacity: 1,
+      x: 0,
+      y: 0,
+      duration: 0.7,
+      stagger: 0.055,
+      ease: 'power3.out',
+    },
+    0.78
+  );
+}
+
+function restoreDetailSourceCard() {
+  videoGrid?.querySelectorAll('.video-card.is-detail-source').forEach((card) => {
+    card.classList.remove('is-detail-source');
+    gsap.set(card, { clearProps: 'opacity,pointerEvents' });
+  });
 }
 
 function requestVideoFullscreen(videoEl) {
@@ -853,29 +1085,155 @@ function requestVideoFullscreen(videoEl) {
   }
 }
 
-function closeVideoDetail(restoreMode = true) {
-  if (!projectPanel.classList.contains('is-open')) return;
+function requestCloseDetail() {
+  const cat = viewState.activeCategory;
+  if (cat) setHash(`#portfolio/${cat}`);
+  else setHash('#portfolio');
+}
+
+function closeVideoDetail({ animate = true, fromRoute = false } = {}) {
+  if (!projectPanel.classList.contains('is-open') && viewState.mode !== 'detail') return;
+
+  // Prefer hash navigation so back/forward stays correct
+  if (!fromRoute) {
+    requestCloseDetail();
+    return;
+  }
+
+  const closingVideoId = viewState.activeVideoId;
+  const playerWrap =
+    document.getElementById('detail-player') ||
+    projectInner.querySelector('.project-panel__player-wrap');
+  const metaEl =
+    document.getElementById('detail-meta') ||
+    projectInner.querySelector('.project-panel__meta');
+  const metaItems = metaEl
+    ? Array.from(metaEl.querySelectorAll('.project-panel__meta-item'))
+    : [];
 
   if (viewState.detailVideoEl) {
     viewState.detailVideoEl.pause();
     viewState.detailVideoEl = null;
   }
 
-  gsap.to(projectInner, {
+  viewState.activeVideoId = null;
+  viewState.mode = viewState.activeCategory ? 'videos' : 'categories';
+  viewState.transitioning = true;
+
+  const targetCard = findVideoCard(closingVideoId);
+  const targetRect = targetCard ? targetCard.getBoundingClientRect() : null;
+  if (targetCard) {
+    gsap.set(targetCard, { opacity: 0, pointerEvents: 'none' });
+    targetCard.classList.add('is-detail-source');
+  }
+
+  const finish = () => {
+    projectPanel.classList.remove('is-open');
+    projectPanel.setAttribute('aria-hidden', 'true');
+    projectInner.innerHTML = '';
+    gsap.set([projectPanel, projectInner], { clearProps: 'opacity,y,scale,visibility' });
+    restoreDetailSourceCard();
+    viewState.transitioning = false;
+
+    // Resume ambient loops on the grid
+    if (viewState.mode === 'videos') {
+      videoGrid.querySelectorAll('.video-card').forEach((card) => {
+        const v = card.querySelector('.video-card__video');
+        startIdleLoop(card, v);
+      });
+    }
+  };
+
+  gsap.killTweensOf([projectPanel, projectInner, playerWrap, metaEl, ...metaItems]);
+
+  if (!animate) {
+    finish();
+    return;
+  }
+
+  const stacked = window.matchMedia('(max-width: 768px)').matches;
+
+  // Reverse: text slips back behind the card, card flies home
+  if (playerWrap && targetRect && targetRect.width >= 8) {
+    const startRect = playerWrap.getBoundingClientRect();
+    playerWrap.classList.add('is-flying');
+    gsap.set(playerWrap, {
+      position: 'fixed',
+      top: startRect.top,
+      left: startRect.left,
+      width: startRect.width,
+      height: startRect.height,
+      margin: 0,
+      maxWidth: 'none',
+      zIndex: 60,
+      borderRadius: 12,
+    });
+
+    const tl = gsap.timeline({
+      defaults: { overwrite: true },
+      onComplete: finish,
+    });
+
+    tl.to(
+      metaItems,
+      {
+        opacity: 0,
+        x: stacked ? 0 : -64,
+        y: stacked ? -36 : 0,
+        duration: 0.35,
+        stagger: { each: 0.03, from: 'end' },
+        ease: 'power2.in',
+      },
+      0
+    );
+
+    tl.to(
+      playerWrap,
+      {
+        top: targetRect.top,
+        left: targetRect.left,
+        width: targetRect.width,
+        height: targetRect.height,
+        borderRadius: 0,
+        boxShadow: '0 8px 28px rgba(0,0,0,0.35)',
+        duration: 0.7,
+        ease: 'power3.inOut',
+      },
+      0.18
+    );
+
+    tl.to(
+      projectPanel,
+      { opacity: 0, duration: 0.4, ease: 'power2.in' },
+      0.45
+    );
+
+    return;
+  }
+
+  gsap.to(metaItems, {
     opacity: 0,
-    y: 16,
-    scale: 0.98,
-    duration: 0.35,
+    x: stacked ? 0 : -40,
+    y: stacked ? -24 : 0,
+    duration: 0.3,
+    stagger: { each: 0.03, from: 'end' },
     ease: 'power2.in',
-    onComplete: () => {
-      projectPanel.classList.remove('is-open');
-      projectPanel.setAttribute('aria-hidden', 'true');
-      projectInner.innerHTML = '';
-      gsap.set(projectInner, { clearProps: 'opacity,y,scale' });
-      if (restoreMode) {
-        viewState.mode = viewState.activeCategory ? 'videos' : 'categories';
-      }
-    },
+    overwrite: true,
+  });
+  gsap.to(playerWrap || projectInner, {
+    opacity: 0,
+    y: 20,
+    scale: 0.96,
+    duration: 0.4,
+    ease: 'power2.in',
+    overwrite: true,
+  });
+  gsap.to(projectPanel, {
+    opacity: 0,
+    duration: 0.45,
+    ease: 'power2.in',
+    overwrite: true,
+    onComplete: finish,
   });
 }
 
@@ -889,12 +1247,17 @@ function initFilters() {
       routing.intent = {
         fromFilter: viewState.mode === 'categories',
         filterBtn: btn,
+        sourceCard: null,
       };
       setHash(`#portfolio/${filter}`);
     });
   });
 
   filterBack.addEventListener('click', () => {
+    if (viewState.mode === 'detail') {
+      requestCloseDetail();
+      return;
+    }
     setHash('#portfolio');
   });
 }
@@ -906,10 +1269,10 @@ function initKeyboard() {
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       if (viewState.mode === 'detail') {
-        closeVideoDetail();
+        requestCloseDetail();
       } else if (viewState.mode === 'videos') {
         setHash('#portfolio');
-      } else if ((getHash() === '#about')) {
+      } else if (getHash() === '#about') {
         setHash('#portfolio');
       }
     }
@@ -1410,7 +1773,6 @@ function initRouting() {
   if (portfolioLink) {
     portfolioLink.addEventListener('click', (e) => {
       e.preventDefault();
-      if (viewState.mode === 'detail') closeVideoDetail();
       setHash('#portfolio');
     });
   }
@@ -1424,11 +1786,11 @@ function initRouting() {
   }
 
   if (projectClose) {
-    projectClose.addEventListener('click', () => closeVideoDetail());
+    projectClose.addEventListener('click', () => requestCloseDetail());
   }
 
   projectPanel.addEventListener('click', (e) => {
-    if (e.target === projectPanel) closeVideoDetail();
+    if (e.target === projectPanel) requestCloseDetail();
   });
 }
 

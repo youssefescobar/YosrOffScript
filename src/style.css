@@ -353,6 +353,11 @@ img, video { display: block; max-width: 100%; }
   -webkit-tap-highlight-color: transparent;
 }
 
+.video-card.is-detail-source {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .video-card:focus-visible {
   outline: 1px solid var(--color-accent);
   outline-offset: -1px;
@@ -934,14 +939,14 @@ img, video { display: block; max-width: 100%; }
   -webkit-backdrop-filter: blur(24px);
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.5s var(--ease-out-expo), visibility 0.5s;
+  pointer-events: none;
   overflow-y: auto;
   padding: var(--space-lg);
 }
 
 .project-panel.is-open {
-  opacity: 1;
   visibility: visible;
+  pointer-events: auto;
 }
 
 .project-panel__close {
@@ -958,6 +963,7 @@ img, video { display: block; max-width: 100%; }
 .project-panel__close:hover { color: var(--color-text); }
 
 .project-panel__inner {
+  position: relative;
   width: 100%;
   max-width: 920px;
   display: grid;
@@ -967,32 +973,59 @@ img, video { display: block; max-width: 100%; }
   justify-content: center;
 }
 
-.project-panel__player-wrap {
+.project-panel__player-slot {
   position: relative;
+  z-index: 2;
   width: 100%;
   max-width: 320px;
   margin: 0 auto;
+}
+
+.project-panel__player-wrap {
+  position: relative;
+  z-index: 2;
+  width: 100%;
   border-radius: var(--tile-radius);
   overflow: hidden;
   background: #000;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.06);
+  will-change: transform, top, left, width, height;
+}
+
+.project-panel__player-wrap.is-flying {
+  margin: 0;
+  max-width: none;
+  border-radius: 0;
 }
 
 .project-panel__video {
   width: 100%;
+  height: 100%;
   aspect-ratio: 9 / 16;
   max-height: min(72vh, 640px);
   object-fit: cover;
   background: #000;
+  display: block;
+}
+
+.project-panel__player-wrap.is-flying .project-panel__video {
+  aspect-ratio: auto;
+  max-height: none;
 }
 
 .project-panel__meta {
+  position: relative;
+  z-index: 1;
   text-align: left;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
+}
+
+.project-panel__meta-item {
+  will-change: transform, opacity;
 }
 
 .project-panel__brand {
@@ -1152,7 +1185,7 @@ img, video { display: block; max-width: 100%; }
     max-width: 100%;
   }
 
-  .project-panel__player-wrap {
+  .project-panel__player-slot {
     max-width: min(280px, 72vw);
   }
 
