@@ -773,19 +773,65 @@ function populateVideoGrid(categoryId, animate = false) {
     card.addEventListener('mouseleave', () => {
       if (!isTouchUi()) setCardHover(card, false);
     });
-    card.addEventListener('focus', () => setCardHover(card, true));
+    card.addEventListener('focus', () => {
+      if (!isTouchUi()) setCardHover(card, true);
+    });
     card.addEventListener('blur', () => {
       if (!isTouchUi()) setCardHover(card, false);
     });
 
-    // Mobile: first tap focuses (hover), second opens — or open if already focused by scroll
-    card.addEventListener('click', (e) => {
-      if (isTouchUi() && !card.classList.contains('is-hover')) {
-        e.preventDefault();
-        videoGrid.querySelectorAll('.video-card.is-hover').forEach((c) => {
-          if (c !== card) setCardHover(c, false);
-        });
+    // Touch: distinguish tap vs scroll, then first tap = hover, second = open
+    let pointerStart = null;
+    let touchOpened = false;
+
+    card.addEventListener(
+      'pointerdown',
+      (e) => {
+        if (e.pointerType === 'mouse') return;
+        pointerStart = { x: e.clientX, y: e.clientY };
+        touchOpened = false;
+      },
+      { passive: true }
+    );
+
+    card.addEventListener(
+      'pointermove',
+      (e) => {
+        if (!pointerStart || e.pointerType === 'mouse') return;
+        const dx = Math.abs(e.clientX - pointerStart.x);
+        const dy = Math.abs(e.clientY - pointerStart.y);
+        if (dx > 12 || dy > 12) pointerStart = null; // treat as scroll
+      },
+      { passive: true }
+    );
+
+    card.addEventListener('pointerup', (e) => {
+      if (e.pointerType === 'mouse' || !pointerStart) return;
+      pointerStart = null;
+
+      // First tap → hover preview; second tap → open detail
+      if (!card.classList.contains('is-hover')) {
+        clearVideoCardHovers(card);
         setCardHover(card, true);
+        touchOpened = true; // suppress the synthetic click that follows
+        return;
+      }
+
+      touchOpened = true;
+      routing.intent.sourceCard = card;
+      setHash(`#portfolio/${video.category}/${video.id}`);
+    });
+
+    card.addEventListener('pointercancel', () => {
+      pointerStart = null;
+    });
+
+    card.addEventListener('click', (e) => {
+      // Synthetic click after touch — already handled in pointerup
+      if (isTouchUi() || touchOpened) {
+        e.preventDefault();
+        e.stopPropagation();
+        touchOpened = false;
         return;
       }
       routing.intent.sourceCard = card;
@@ -812,8 +858,6 @@ function populateVideoGrid(categoryId, animate = false) {
       { opacity: 1, y: 0, scale: 1, duration: 0.55, stagger: 0.05, ease: 'expo.out' }
     );
   }
-
-  scheduleTouchFocus();
 }
 
 function startIdleLoop(card, videoEl) {
@@ -856,10 +900,9 @@ const META_HOVER = {
 };
 
 function isTouchUi() {
-  return (
-    window.matchMedia('(hover: none)').matches ||
-    window.matchMedia('(pointer: coarse)').matches
-  );
+  // True devices without hover (phones). Don't use pointer:coarse —
+  // that misfires on hybrid tablets/laptops and breaks mouse hover.
+  return window.matchMedia('(hover: none)').matches;
 }
 
 function metaPoseVars(hover) {
@@ -904,47 +947,26 @@ function setCardHover(card, on, { animate = true } = {}) {
   setMetaPose(card, wantHover, animate);
 }
 
-/* On touch: the card nearest the focus band gets the “hover” treatment */
-let touchFocusRaf = 0;
-
-function updateTouchFocusCard() {
-  if (!isTouchUi() || viewState.mode !== 'videos' || !videoGrid) return;
-
-  const rootRect = videoGrid.getBoundingClientRect();
-  const focusY = rootRect.top + rootRect.height * 0.38;
-  let best = null;
-  let bestDist = Infinity;
-
-  videoGrid.querySelectorAll('.video-card').forEach((card) => {
-    if (card.classList.contains('is-detail-source')) return;
-    const r = card.getBoundingClientRect();
-    if (r.bottom < rootRect.top + 40 || r.top > rootRect.bottom - 40) return;
-    const cy = r.top + r.height * 0.45;
-    const dist = Math.abs(cy - focusY);
-    if (dist < bestDist) {
-      bestDist = dist;
-      best = card;
-    }
-  });
-
-  videoGrid.querySelectorAll('.video-card').forEach((card) => {
-    const should = card === best;
-    if (card.classList.contains('is-hover') !== should) {
-      setCardHover(card, should, { animate: true });
-    }
-  });
-}
-
-function scheduleTouchFocus() {
-  if (!isTouchUi()) return;
-  cancelAnimationFrame(touchFocusRaf);
-  touchFocusRaf = requestAnimationFrame(updateTouchFocusCard);
-}
-
-function bindTouchCardFocus() {
+function clearVideoCardHovers(except = null) {
   if (!videoGrid) return;
-  videoGrid.addEventListener('scroll', scheduleTouchFocus, { passive: true });
-  window.addEventListener('resize', scheduleTouchFocus, { passive: true });
+  videoGrid.querySelectorAll('.video-card.is-hover').forEach((card) => {
+    if (card !== except) setCardHover(card, false);
+  });
+}
+
+function bindTouchCardDismiss() {
+  if (!videoGrid) return;
+  // Tap empty chrome / backdrop clears hover preview
+  document.addEventListener(
+    'pointerdown',
+    (e) => {
+      if (!isTouchUi() || viewState.mode !== 'videos') return;
+      if (e.target.closest('.video-card')) return;
+      if (e.target.closest('.header, .footer, .project-panel, .about-panel')) return;
+      clearVideoCardHovers();
+    },
+    { passive: true }
+  );
 }
 
 function stopAllPreviews() {
@@ -1959,7 +1981,7 @@ function init() {
   initFilters();
   initKeyboard();
   initRouting();
-  bindTouchCardFocus();
+  bindTouchCardDismiss();
   updateNav(parseRoute('#portfolio'));
   preloadAssets();
 }

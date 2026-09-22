@@ -351,6 +351,7 @@ img, video { display: block; max-width: 100%; }
   border-radius: 0;
   scroll-snap-align: start;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .video-card.is-detail-source {
