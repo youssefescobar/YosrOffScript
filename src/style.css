@@ -418,22 +418,20 @@ img, video { display: block; max-width: 100%; }
   transform: scale(1.02);
 }
 
-/* Idle meta — big centered title */
+/* Idle meta — big centered title (GSAP owns left/top/scale) */
 .video-card__meta {
   position: absolute;
   inset: 0;
   z-index: 3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
   pointer-events: none;
   background: rgba(0, 0, 0, 0.18);
   transition: background 0.95s var(--ease-out-expo);
 }
 
 .video-card__meta-inner {
-  position: relative;
+  position: absolute;
+  left: 50%;
+  top: 50%;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -449,28 +447,24 @@ img, video { display: block; max-width: 100%; }
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--color-accent);
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   opacity: 0.7;
-  transition:
-    opacity 0.85s var(--ease-out-expo),
-    margin 0.9s var(--ease-out-expo);
+  transition: opacity 0.85s var(--ease-out-expo);
 }
 
 .video-card__title {
-  font-size: clamp(1.35rem, 2.6vw, 2.15rem);
+  /* Fixed size — idle “big” look comes from meta-inner scale */
+  font-size: clamp(0.95rem, 1.4vw, 1.3rem);
   font-weight: 300;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   line-height: 1.1;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.92);
   transition: color 0.85s var(--ease-out-expo);
 }
 
-/* Hover meta — settle bottom-left (layout jumps; GSAP FLIP smooths it) */
+/* Hover meta — background only; position handled by GSAP */
 .video-card.is-hover .video-card__meta {
-  align-items: flex-end;
-  justify-content: flex-start;
-  padding: 20px 18px;
   background: linear-gradient(
     to top,
     rgba(0, 0, 0, 0.82) 0%,
@@ -485,12 +479,9 @@ img, video { display: block; max-width: 100%; }
 
 .video-card.is-hover .video-card__brand {
   opacity: 1;
-  margin-bottom: 6px;
 }
 
 .video-card.is-hover .video-card__title {
-  font-size: clamp(0.95rem, 1.4vw, 1.3rem);
-  letter-spacing: 0.02em;
   color: #fff;
 }
 
@@ -1250,11 +1241,7 @@ img, video { display: block; max-width: 100%; }
   }
 
   .video-card__title {
-    font-size: clamp(1.05rem, 4.5vw, 1.45rem);
-  }
-
-  .video-card.is-hover .video-card__title {
-    font-size: clamp(0.85rem, 3.2vw, 1.05rem);
+    font-size: clamp(0.9rem, 3.2vw, 1.15rem);
   }
 
   /* Detail — side-by-side like desktop, not stacked */

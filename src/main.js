@@ -352,12 +352,9 @@ function enterCategory(categoryId, { fromFilter = false, filterBtn = null } = {}
 
   const runAfterCenter = () => openVideoView(categoryId, card);
 
+  // Already in a film grid — crossfade into the new category
   if (viewState.mode === 'videos') {
-    stopAllPreviews();
-    populateVideoGrid(categoryId, true);
-    viewState.activeCategory = categoryId;
-    updateFooterForVideos(categoryId);
-    viewState.transitioning = false;
+    switchVideoCategory(categoryId);
     return;
   }
 
@@ -376,6 +373,90 @@ function enterCategory(categoryId, { fromFilter = false, filterBtn = null } = {}
   };
 
   sequence();
+}
+
+/** Animate film grid when switching categories via footer filters. */
+function switchVideoCategory(categoryId) {
+  stopAllPreviews();
+
+  // Update filter / counts immediately — don't wait for the grid crossfade
+  viewState.activeCategory = categoryId;
+  updateFooterForVideos(categoryId);
+
+  const oldCards = Array.from(videoGrid.querySelectorAll('.video-card'));
+  const titleEl = videoViewTitle;
+
+  const finishIn = () => {
+    viewState.transitioning = false;
+  };
+
+  const revealNew = () => {
+    populateVideoGrid(categoryId, false);
+    const newCards = videoGrid.querySelectorAll('.video-card');
+
+    gsap.set(titleEl, { opacity: 0, y: 10 });
+    gsap.set(newCards, { opacity: 0, y: 24, scale: 0.97 });
+
+    gsap
+      .timeline({
+        defaults: { overwrite: true },
+        onComplete: () => {
+          gsap.set([titleEl, newCards], { clearProps: 'opacity,y,scale' });
+          finishIn();
+        },
+      })
+      .to(titleEl, {
+        opacity: 1,
+        y: 0,
+        duration: 0.35,
+        ease: 'power2.out',
+      })
+      .to(
+        newCards,
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.55,
+          stagger: 0.04,
+          ease: 'expo.out',
+        },
+        '-=0.18'
+      );
+  };
+
+  if (!oldCards.length) {
+    revealNew();
+    return;
+  }
+
+  gsap
+    .timeline({ defaults: { overwrite: true } })
+    .to(
+      oldCards,
+      {
+        opacity: 0,
+        y: -12,
+        scale: 0.98,
+        duration: 0.28,
+        stagger: { each: 0.02, from: 'start' },
+        ease: 'power2.in',
+      },
+      0
+    )
+    .to(
+      titleEl,
+      {
+        opacity: 0,
+        y: -8,
+        duration: 0.22,
+        ease: 'power2.in',
+      },
+      0
+    )
+    .add(() => {
+      revealNew();
+    });
 }
 
 /* Off-white pill → card → center: one continuous timeline */
@@ -715,6 +796,7 @@ function populateVideoGrid(categoryId, animate = false) {
     });
 
     videoGrid.appendChild(card);
+    setMetaPose(card, false, false);
   });
 
   if (animate) {
@@ -743,89 +825,63 @@ function startIdleLoop(card, videoEl) {
   }
 }
 
-function setCardHover(card, on) {
+/* Meta pose — GSAP owns position/scale so hover never layout-snaps */
+const META_IDLE = {
+  left: '50%',
+  top: '50%',
+  xPercent: -50,
+  yPercent: -50,
+  x: 0,
+  y: 0,
+  scale: 1.72,
+  transformOrigin: '50% 50%',
+};
+
+const META_HOVER = {
+  left: 18,
+  top: '100%',
+  xPercent: 0,
+  yPercent: -100,
+  x: 0,
+  y: -20,
+  scale: 1,
+  transformOrigin: '50% 50%',
+};
+
+function setMetaPose(card, hover, animate = true) {
   const inner = card.querySelector('.video-card__meta-inner');
-  const title = card.querySelector('.video-card__title');
-  const brand = card.querySelector('.video-card__brand');
-  const wantHover = !!on;
+  if (!inner) return;
 
-  if (card.classList.contains('is-hover') === wantHover) return;
+  const vars = hover ? { ...META_HOVER } : { ...META_IDLE };
+  gsap.killTweensOf(inner);
 
-  if (!inner) {
-    card.classList.toggle('is-hover', wantHover);
-    return;
-  }
-
-  // FLIP: measure → swap layout → invert → play (brand + title travel together)
-  const first = inner.getBoundingClientRect();
-  const firstTitle = title ? title.getBoundingClientRect() : null;
-  const firstBrand = brand ? brand.getBoundingClientRect() : null;
-
-  card.classList.toggle('is-hover', wantHover);
-
-  const last = inner.getBoundingClientRect();
-  const lastTitle = title ? title.getBoundingClientRect() : null;
-  const lastBrand = brand ? brand.getBoundingClientRect() : null;
-
-  const dx = first.left - last.left;
-  const dy = first.top - last.top;
-  const sx = first.width / Math.max(last.width, 1);
-  const sy = first.height / Math.max(last.height, 1);
-
-  gsap.killTweensOf([inner, title, brand].filter(Boolean));
-
-  gsap.fromTo(
-    inner,
-    {
-      x: dx,
-      y: dy,
-      scaleX: sx,
-      scaleY: sy,
-      transformOrigin: '0% 0%',
-    },
-    {
-      x: 0,
-      y: 0,
-      scaleX: 1,
-      scaleY: 1,
+  if (animate) {
+    gsap.to(inner, {
+      ...vars,
       duration: 0.95,
       ease: 'expo.inOut',
       overwrite: true,
-      onComplete: () => {
-        gsap.set(inner, { clearProps: 'transform' });
-      },
-    }
-  );
+    });
+  } else {
+    gsap.set(inner, vars);
+  }
+}
 
-  // Counter-scale type so it doesn't look stretched while the block moves
-  const flipType = (el, firstRect, lastRect) => {
-    if (!el || !firstRect || !lastRect) return;
-    const tsx = (firstRect.width / Math.max(lastRect.width, 1)) / sx;
-    const tsy = (firstRect.height / Math.max(lastRect.height, 1)) / sy;
-    gsap.fromTo(
-      el,
-      { scaleX: tsx, scaleY: tsy, transformOrigin: '0% 0%' },
-      {
-        scaleX: 1,
-        scaleY: 1,
-        duration: 0.95,
-        ease: 'expo.inOut',
-        overwrite: true,
-        onComplete: () => {
-          gsap.set(el, { clearProps: 'transform' });
-        },
-      }
-    );
-  };
-
-  flipType(title, firstTitle, lastTitle);
-  flipType(brand, firstBrand, lastBrand);
+function setCardHover(card, on) {
+  const wantHover = !!on;
+  if (card.classList.contains('is-hover') === wantHover) return;
+  card.classList.toggle('is-hover', wantHover);
+  setMetaPose(card, wantHover, true);
 }
 
 function stopAllPreviews() {
   videoGrid.querySelectorAll('.video-card').forEach((card) => {
     const v = card.querySelector('.video-card__video');
-    card.classList.remove('is-hover', 'is-playing', 'is-previewing');
+    if (card.classList.contains('is-hover')) {
+      card.classList.remove('is-hover');
+      setMetaPose(card, false, false);
+    }
+    card.classList.remove('is-playing', 'is-previewing');
     if (v) {
       v.pause();
       try {
@@ -1235,6 +1291,12 @@ function initFilters() {
   document.querySelectorAll('.filter-btn[data-filter]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const filter = btn.dataset.filter;
+
+      // Highlight filter immediately (don't wait for route / grid anim)
+      document.querySelectorAll('.filter-btn[data-filter]').forEach((b) => {
+        b.classList.toggle('active', b === btn);
+      });
+
       routing.intent = {
         fromFilter: viewState.mode === 'categories',
         filterBtn: btn,
