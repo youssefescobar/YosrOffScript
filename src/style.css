@@ -1171,7 +1171,10 @@ img, video { display: block; max-width: 100%; }
 
 @media (max-width: 768px) {
   .header {
-    padding: var(--space-sm) var(--space-md);
+    padding: max(var(--space-sm), env(safe-area-inset-top)) var(--space-md) var(--space-sm);
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   .header__name {
@@ -1179,8 +1182,11 @@ img, video { display: block; max-width: 100%; }
   }
 
   .footer {
-    padding: var(--space-sm) var(--space-md);
+    padding: var(--space-sm) var(--space-md) max(var(--space-sm), env(safe-area-inset-bottom));
     justify-content: center;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   .footer__left,
@@ -1192,6 +1198,7 @@ img, video { display: block; max-width: 100%; }
     -ms-overflow-style: none;
     scrollbar-width: none;
     padding: var(--space-xs);
+    background: transparent;
   }
 
   .footer__center::-webkit-scrollbar { display: none; }
@@ -1224,32 +1231,18 @@ img, video { display: block; max-width: 100%; }
     font-size: 0.9rem;
   }
 
-  /* Category title sits below main nav — not colliding with Portfolio/About */
+  /* Hide category title on mobile — nav + grid only */
   .video-view__header {
-    top: var(--header-h);
-    height: 40px;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.72) 0%,
-      rgba(0, 0, 0, 0.25) 70%,
-      transparent 100%
-    );
+    display: none;
   }
 
-  .video-view__title {
-    font-size: 0.62rem;
-    letter-spacing: 0.22em;
-    color: rgba(232, 228, 223, 0.72);
-  }
-
+  /* Grid bleeds under translucent header/footer like desktop */
   .video-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 0;
-    padding: calc(var(--header-h) + 40px) 0 calc(var(--footer-h) + 8px);
-    scroll-padding-top: calc(var(--header-h) + 40px);
-    scroll-padding-bottom: calc(var(--footer-h) + 8px);
+    padding: 0;
+    scroll-padding-top: var(--header-h);
+    scroll-padding-bottom: var(--footer-h);
   }
 
   .video-card {
