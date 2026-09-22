@@ -1,440 +1,741 @@
 /* ===================================================
-   MAIN — Infinite Wrapping 2D Canvas + Fisheye Distortion
-   
-   - Grid wraps in both X and Y (toroidal topology)
-   - Fisheye barrel distortion: edges/corners curve inward
-   - Dragging works ON tiles (not just gaps)
-   - Click vs drag distinction: only opens project on clean click
+   MAIN — Category cards → McKinnon video grid → detail
    =================================================== */
 import gsap from 'gsap';
 import { Observer } from 'gsap/Observer';
-import PROJECTS from './projects.js';
+import {
+  CATEGORIES,
+  VIDEOS,
+  getVideosByCategory,
+  getCategory,
+} from './projects.js';
 
 gsap.registerPlugin(Observer);
 
 /* ---------- DOM refs ---------- */
-const loader      = document.getElementById('loader');
-const viewport    = document.getElementById('viewport');
-const canvas      = document.getElementById('canvas');
+const loader = document.getElementById('loader');
+const viewport = document.getElementById('viewport');
+const categoryView = document.getElementById('category-view');
+const videoView = document.getElementById('video-view');
+const videoGrid = document.getElementById('video-grid');
+const videoViewTitle = document.getElementById('video-view-title');
 const tileCountEl = document.getElementById('tile-count');
-const aboutPanel  = document.getElementById('about-panel');
-const aboutClose  = document.getElementById('about-close');
+const footerHint = document.getElementById('footer-hint');
+const filterBack = document.getElementById('filter-back');
+const aboutPanel = document.getElementById('about-panel');
+const aboutClose = document.getElementById('about-close');
 const projectPanel = document.getElementById('project-panel');
 const projectClose = document.getElementById('project-close');
 const projectInner = document.getElementById('project-inner');
-const header      = document.getElementById('header');
+const header = document.getElementById('header');
+const flipGhost = document.getElementById('flip-ghost');
 
 /* ---------- State ---------- */
-const state = {
-  targetX:  0,
-  targetY:  0,
-  currentX: 0,
-  currentY: 0,
+const viewState = {
+  mode: 'categories', // 'categories' | 'videos' | 'detail'
+  activeCategory: null,
+  transitioning: false,
+  playingVideo: null,
+  detailVideoEl: null,
 };
 
-let tiles = [];
-let activeFilter = 'all';
 let loaderDone = false;
-
-/* ---------- Grid config ---------- */
-let GAP = 6;
-const LERP = 0.08;
-const DRAG_MULT = 1.8;
-const CLICK_THRESHOLD = 6;  // px — movement below this = click, above = drag
-
-/* Fisheye config */
-const FISHEYE_ROT_X = 25;    // reduced to keep items facing forward
-const FISHEYE_ROT_Y = 35;    // reduced to reduce horizontal gaps
-const FISHEYE_Z     = 150;   // reduced from 450 to keep outer items closer
-const FISHEYE_SCALE = 0.85;  // scale down slightly at edges to counteract perspective bloat
-const FISHEYE_DIM   = 0.5;   // keep outer items a bit brighter
-
-// Tile size presets (varying aspect ratios)
-let TILE_SIZES = [];
-
-function computeSizes() {
-  const isMobile = window.innerWidth <= 768;
-  GAP = isMobile ? 3 : 6;
-  
-  if (isMobile) {
-    TILE_SIZES = [
-      { w: 120, h: 90 },
-      { w: 90, h: 120 },
-      { w: 100, h: 100 },
-      { w: 140, h: 90 },
-      { w: 90, h: 140 },
-      { w: 110, h: 80 },
-      { w: 130, h: 100 },
-      { w: 100, h: 100 },
-    ];
-  } else {
-    TILE_SIZES = [
-      { w: 220, h: 160 },
-      { w: 180, h: 240 },
-      { w: 200, h: 200 },
-      { w: 260, h: 170 },
-      { w: 170, h: 260 },
-      { w: 200, h: 150 },
-      { w: 240, h: 180 },
-      { w: 180, h: 180 },
-    ];
-  }
-}
-computeSizes();
-
-const worldSize = { w: 0, h: 0 };
+let categoryCards = [];
 
 /* ===================================================
-   1.  BUILD THE GRID
+   1. CATEGORY LANDING
    =================================================== */
-function buildGrid() {
-  computeSizes();
+function buildCategoryView() {
+  categoryView.innerHTML = '';
+  categoryCards = [];
 
+  CATEGORIES.forEach((cat) => {
+    const count = getVideosByCategory(cat.id).length;
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'category-card';
+    el.setAttribute('data-category', cat.id);
+    el.innerHTML = `
+      <img class="category-card__img" src="${cat.cover}" alt="${cat.label}" draggable="false" />
+      <div class="category-card__overlay">
+        <span class="category-card__label">${cat.label}</span>
+        <span class="category-card__count">${count} films</span>
+      </div>
+    `;
+    el.addEventListener('click', () => enterCategory(cat.id, { fromFilter: false }));
+    categoryView.appendChild(el);
+    categoryCards.push(el);
+  });
+
+  updateFooterForCategories();
+}
+
+function updateFooterForCategories() {
+  tileCountEl.textContent = `${CATEGORIES.length} Categories`;
+  footerHint.textContent = 'Select a category';
+  filterBack.hidden = true;
+  document.querySelectorAll('.filter-btn[data-filter]').forEach((btn) => {
+    btn.classList.remove('active');
+    btn.hidden = false;
+  });
+}
+
+function updateFooterForVideos(categoryId) {
+  const cat = getCategory(categoryId);
+  const videos = getVideosByCategory(categoryId);
+  tileCountEl.textContent = `${videos.length} Films`;
+  footerHint.textContent = cat ? cat.label : '';
+  filterBack.hidden = false;
+  document.querySelectorAll('.filter-btn[data-filter]').forEach((btn) => {
+    const isActive = btn.dataset.filter === categoryId;
+    btn.classList.toggle('active', isActive);
+    btn.hidden = false;
+  });
+}
+
+/* ===================================================
+   2. ENTER / EXIT CATEGORY (center morph)
+   =================================================== */
+function getCardCenterDelta(card) {
+  const rect = card.getBoundingClientRect();
   const vw = window.innerWidth;
   const vh = window.innerHeight;
+  return {
+    x: (vw - rect.width) / 2 - rect.left,
+    y: (vh - rect.height) / 2 - rect.top,
+  };
+}
 
-  const avgTileW = TILE_SIZES[0].w;
-  const avgTileH = TILE_SIZES[0].h;
-  const baseCols = Math.ceil(vw / (avgTileW + GAP)) + 3;
-  const baseRows = Math.ceil(vh / (avgTileH + GAP)) + 3;
+function animateCardToCenter(card) {
+  return new Promise((resolve) => {
+    const others = categoryCards.filter((c) => c !== card);
+    card.classList.add('is-focus');
 
-  canvas.innerHTML = '';
-  tiles = [];
+    const tl = gsap.timeline({
+      onComplete: resolve,
+    });
 
-  for (let r = 0; r < baseRows; r++) {
-    for (let c = 0; c < baseCols; c++) {
-      const idx = (r * baseCols + c) % PROJECTS.length;
-      const proj = PROJECTS[idx];
-      const w = TILE_SIZES[c % TILE_SIZES.length].w;
-      const h = TILE_SIZES[r % TILE_SIZES.length].h;
+    // 1) Clear the other cards
+    tl.to(others, {
+      opacity: 0,
+      scale: 0.88,
+      duration: 0.45,
+      ease: 'expo.inOut',
+      stagger: 0.04,
+    });
 
-      const el = document.createElement('div');
-      el.className = 'tile';
-      el.setAttribute('data-category', proj.category);
-      el.setAttribute('data-project-id', proj.id);
-      el.style.width = `${w}px`;
-      el.style.height = `${h}px`;
-      el.innerHTML = `
-        <img class="tile__img" src="${proj.img}" alt="${proj.title}" loading="lazy" draggable="false" />
-        <div class="tile__overlay">
-          <div class="tile__title">${proj.title}</div>
-          <div class="tile__category">${proj.category}</div>
-        </div>
-      `;
+    // 2) Slide selected card to viewport center
+    const { x, y } = getCardCenterDelta(card);
+    tl.to(
+      card,
+      {
+        x,
+        y,
+        scale: 1.06,
+        duration: 0.75,
+        ease: 'expo.inOut',
+      },
+      '-=0.12'
+    );
+  });
+}
 
-      canvas.appendChild(el);
+function animateCardFromCenter(card) {
+  return new Promise((resolve) => {
+    const others = categoryCards.filter((c) => c !== card);
 
-      tiles.push({
-        el,
-        project: proj,
-        baseX: 0,
-        baseY: 0,
-        w,
-        h,
-        animScale: 1, // Add for GSAP animations
-        screenX: 0,
-        screenY: 0,
-      });
-    }
+    // Measure the card in its natural grid slot
+    gsap.set(card, { clearProps: 'x,y,scale' });
+    gsap.set(others, { opacity: 0, scale: 0.88, clearProps: 'x,y' });
+    gsap.set(card, { opacity: 1 });
+    void card.offsetWidth;
+
+    const { x, y } = getCardCenterDelta(card);
+    card.classList.add('is-focus');
+    gsap.set(card, { x, y, scale: 1.06, opacity: 1 });
+
+    const tl = gsap.timeline({
+      onComplete: () => {
+        card.classList.remove('is-focus');
+        gsap.set(categoryCards, { clearProps: 'x,y,scale,opacity' });
+        resolve();
+      },
+    });
+
+    // 1) Card travels back to its grid slot
+    tl.to(card, {
+      x: 0,
+      y: 0,
+      scale: 1,
+      duration: 0.75,
+      ease: 'expo.inOut',
+    });
+
+    // 2) Other cards fade back in
+    tl.to(
+      others,
+      {
+        opacity: 1,
+        scale: 1,
+        duration: 0.55,
+        stagger: 0.05,
+        ease: 'expo.out',
+      },
+      '-=0.35'
+    );
+  });
+}
+
+function enterCategory(categoryId, { fromFilter = false, filterBtn = null } = {}) {
+  if (viewState.transitioning) return;
+  if (viewState.mode === 'videos' && viewState.activeCategory === categoryId) return;
+
+  const cat = getCategory(categoryId);
+  if (!cat) return;
+
+  viewState.transitioning = true;
+  const card = categoryView.querySelector(`[data-category="${categoryId}"]`);
+
+  const runAfterCenter = () => openVideoView(categoryId, card);
+
+  if (viewState.mode === 'videos') {
+    stopAllPreviews();
+    populateVideoGrid(categoryId, true);
+    viewState.activeCategory = categoryId;
+    updateFooterForVideos(categoryId);
+    viewState.transitioning = false;
+    return;
   }
 
-  tileCountEl.textContent = `${PROJECTS.length} Projects`;
-  layoutGrid(false);
+  if (!card) {
+    openVideoView(categoryId, null);
+    return;
+  }
+
+  const sequence = async () => {
+    if (fromFilter && filterBtn) {
+      await animateFilterIntoCategory(filterBtn, card);
+    } else {
+      await animateCardToCenter(card);
+    }
+    runAfterCenter();
+  };
+
+  sequence();
+}
+
+/* Off-white pill → card → center: one continuous timeline */
+function animateFilterIntoCategory(filterBtn, card) {
+  return new Promise((resolve) => {
+    const others = categoryCards.filter((c) => c !== card);
+    const from = filterBtn.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+    const label = filterBtn.textContent.trim();
+    const { x: centerX, y: centerY } = getCardCenterDelta(card);
+
+    // Mark active filter
+    document.querySelectorAll('.filter-btn[data-filter]').forEach((b) => {
+      b.classList.toggle('active', b === filterBtn);
+    });
+
+    card.classList.add('is-focus');
+
+    // Color pill only at first — label stays hidden until the shape is large enough
+    flipGhost.innerHTML = `<span class="flip-ghost__label">${label}</span>`;
+    flipGhost.classList.add('is-visible', 'is-morphing');
+    const ghostLabel = flipGhost.querySelector('.flip-ghost__label');
+
+    gsap.set(flipGhost, {
+      x: from.left,
+      y: from.top,
+      width: from.width,
+      height: from.height,
+      borderRadius: 100,
+      opacity: 1,
+      scale: 1,
+    });
+    gsap.set(ghostLabel, { opacity: 0, scale: 0.92 });
+
+    // Card waits dimmed under the ghost until handoff
+    gsap.set(card, { opacity: 0.35 });
+
+    // Soft pulse on the filter as the ghost leaves
+    gsap.fromTo(
+      filterBtn,
+      { scale: 1 },
+      { scale: 0.92, duration: 0.28, yoyo: true, repeat: 1, ease: 'power2.inOut' }
+    );
+
+    const tl = gsap.timeline({
+      onComplete: resolve,
+    });
+
+    // 1) Ghost flies from pill → card slot, expanding into card shape
+    tl.to(
+      flipGhost,
+      {
+        x: cardRect.left,
+        y: cardRect.top,
+        width: cardRect.width,
+        height: cardRect.height,
+        borderRadius: 12,
+        duration: 1.25,
+        ease: 'expo.inOut',
+      },
+      0
+    );
+
+    // Label eases in mid-flight once the shape has grown
+    tl.to(
+      ghostLabel,
+      {
+        opacity: 1,
+        scale: 1,
+        duration: 0.45,
+        ease: 'power2.out',
+      },
+      0.55
+    );
+
+    // 2) Other cards clear while the ghost is mid-flight
+    tl.to(
+      others,
+      {
+        opacity: 0,
+        scale: 0.88,
+        duration: 0.65,
+        stagger: 0.04,
+        ease: 'expo.inOut',
+      },
+      0.28
+    );
+
+    // 3) Handoff: ghost dissolves into the real card (no pause)
+    tl.to(
+      flipGhost,
+      {
+        opacity: 0,
+        duration: 0.35,
+        ease: 'power2.out',
+        onComplete: () => {
+          flipGhost.classList.remove('is-visible', 'is-morphing');
+          flipGhost.innerHTML = '';
+          gsap.set(flipGhost, { clearProps: 'all' });
+        },
+      },
+      1.05
+    );
+
+    tl.to(
+      card,
+      {
+        opacity: 1,
+        duration: 0.35,
+        ease: 'power2.out',
+      },
+      1.05
+    );
+
+    // 4) Same card immediately continues into the center (overlaps handoff)
+    tl.to(
+      card,
+      {
+        x: centerX,
+        y: centerY,
+        scale: 1.06,
+        duration: 0.75,
+        ease: 'expo.inOut',
+      },
+      1.15
+    );
+  });
+}
+
+function openVideoView(categoryId, focusCard) {
+  const cat = getCategory(categoryId);
+  viewState.mode = 'videos';
+  viewState.activeCategory = categoryId;
+
+  populateVideoGrid(categoryId, false);
+  videoViewTitle.textContent = cat ? cat.label : '';
+  videoView.hidden = false;
+  updateFooterForVideos(categoryId);
+
+  const cards = videoGrid.querySelectorAll('.video-card');
+  gsap.set(cards, { opacity: 0, y: 30 });
+  gsap.set(videoView, { opacity: 0 });
+
+  const tl = gsap.timeline({
+    onComplete: () => {
+      viewState.transitioning = false;
+      if (focusCard) focusCard.classList.remove('is-focus');
+      gsap.set(categoryCards, { clearProps: 'opacity,scale,x,y' });
+    },
+  });
+
+  // Fade the centered card / category stage out
+  if (focusCard) {
+    tl.to(focusCard, {
+      opacity: 0,
+      scale: 1.12,
+      duration: 0.4,
+      ease: 'power2.in',
+    });
+  }
+
+  tl.to(
+    categoryView,
+    {
+      opacity: 0,
+      duration: 0.35,
+      ease: 'power2.in',
+      onComplete: () => {
+        categoryView.hidden = true;
+        gsap.set(categoryView, { clearProps: 'opacity' });
+      },
+    },
+    focusCard ? '-=0.25' : 0
+  )
+    .to(
+      videoView,
+      { opacity: 1, duration: 0.4, ease: 'power2.out' },
+      '-=0.1'
+    )
+    .to(
+      cards,
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.7,
+        stagger: 0.06,
+        ease: 'expo.out',
+      },
+      '-=0.15'
+    );
+}
+
+function exitToCategories() {
+  if (viewState.transitioning || viewState.mode === 'categories') return;
+  if (viewState.mode === 'detail') closeVideoDetail(false);
+
+  viewState.transitioning = true;
+  stopAllPreviews();
+
+  const returningId = viewState.activeCategory;
+  const focusCard = returningId
+    ? categoryView.querySelector(`[data-category="${returningId}"]`)
+    : null;
+  const videoCards = videoGrid.querySelectorAll('.video-card');
+
+  const tl = gsap.timeline();
+
+  tl.to(videoCards, {
+    opacity: 0,
+    y: 20,
+    duration: 0.35,
+    stagger: 0.03,
+    ease: 'power2.in',
+  }).to(
+    videoView,
+    {
+      opacity: 0,
+      duration: 0.35,
+      ease: 'power2.in',
+      onComplete: () => {
+        videoView.hidden = true;
+        videoGrid.innerHTML = '';
+        gsap.set(videoView, { clearProps: 'opacity' });
+
+        categoryView.hidden = false;
+        viewState.mode = 'categories';
+        updateFooterForCategories();
+
+        if (focusCard) {
+          // Reverse: card starts centered, then returns to slot
+          animateCardFromCenter(focusCard).then(() => {
+            viewState.activeCategory = null;
+            viewState.transitioning = false;
+          });
+        } else {
+          viewState.activeCategory = null;
+          gsap.fromTo(
+            categoryCards,
+            { opacity: 0, scale: 0.94, y: 24 },
+            {
+              opacity: 1,
+              scale: 1,
+              y: 0,
+              duration: 0.75,
+              stagger: 0.08,
+              ease: 'expo.out',
+              onComplete: () => {
+                viewState.transitioning = false;
+                gsap.set(categoryCards, { clearProps: 'opacity,scale,y' });
+              },
+            }
+          );
+        }
+      },
+    },
+    '-=0.1'
+  );
 }
 
 /* ===================================================
-   1b. LAYOUT GRID
+   3. VIDEO GRID (McKinnon-style)
    =================================================== */
-function layoutGrid(animate = false) {
-  const visibleTiles = tiles.filter(t => activeFilter === 'all' || t.project.category === activeFilter);
-  const hiddenTiles = tiles.filter(t => activeFilter !== 'all' && t.project.category !== activeFilter);
+function populateVideoGrid(categoryId, animate = false) {
+  const videos = getVideosByCategory(categoryId);
+  videoGrid.innerHTML = '';
+  videoViewTitle.textContent = getCategory(categoryId)?.label || '';
 
-  // Hide non-matching
-  hiddenTiles.forEach(t => {
-    t.el.style.pointerEvents = 'none'; // prevent clicks while fading out
-    if (animate) {
-      gsap.to(t, { animScale: 0, duration: 1.2, ease: 'expo.inOut' });
-      gsap.to(t.el, { opacity: 0, duration: 1.2, ease: 'expo.inOut' });
-    } else {
-      t.animScale = 0;
-      t.el.style.opacity = 0;
-    }
+  videos.forEach((video) => {
+    const card = document.createElement('article');
+    card.className = 'video-card';
+    card.setAttribute('data-video-id', video.id);
+    card.tabIndex = 0;
+
+    const brandHtml = video.brand
+      ? `<span class="video-card__brand">${video.brand}</span>`
+      : '';
+
+    card.innerHTML = `
+      <div class="video-card__media">
+        <img class="video-card__poster" src="${video.poster}" alt="" draggable="false" />
+        <video
+          class="video-card__video"
+          src="${video.src}"
+          muted
+          loop
+          playsinline
+          preload="metadata"
+          poster="${video.poster}"
+        ></video>
+      </div>
+      <div class="video-card__meta">
+        ${brandHtml}
+        <h3 class="video-card__title">${video.title}</h3>
+      </div>
+    `;
+
+    const videoEl = card.querySelector('.video-card__video');
+
+    card.addEventListener('mouseenter', () => playPreview(card, videoEl));
+    card.addEventListener('mouseleave', () => stopPreview(card, videoEl));
+    card.addEventListener('focus', () => playPreview(card, videoEl));
+    card.addEventListener('blur', () => stopPreview(card, videoEl));
+
+    // Mobile: first tap previews, second opens
+    card.addEventListener('click', (e) => {
+      const isTouch = window.matchMedia('(hover: none)').matches;
+      if (isTouch && !card.classList.contains('is-previewing')) {
+        e.preventDefault();
+        stopAllPreviews();
+        playPreview(card, videoEl);
+        return;
+      }
+      openVideoDetail(video);
+    });
+
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openVideoDetail(video);
+      }
+    });
+
+    videoGrid.appendChild(card);
   });
 
-  if (visibleTiles.length === 0) return;
-
-  const N = visibleTiles.length;
-  let aspect = window.innerWidth / window.innerHeight;
-  if (window.innerWidth <= 768) aspect *= 1.5; // force more columns on mobile
-  
-  let cols = Math.ceil(Math.sqrt(N * aspect));
-  if (cols < 2) cols = 2; // ensure at least 2 columns
-  const rows = Math.ceil(N / cols);
-
-  const colWidths = [];
-  const rowHeights = [];
-  for (let c = 0; c < cols; c++) colWidths.push(TILE_SIZES[c % TILE_SIZES.length].w);
-  for (let r = 0; r < rows; r++) rowHeights.push(TILE_SIZES[r % TILE_SIZES.length].h);
-
-  const colX = [0];
-  for (let c = 1; c < cols; c++) colX.push(colX[c - 1] + colWidths[c - 1] + GAP);
-  const rowY = [0];
-  for (let r = 1; r < rows; r++) rowY.push(rowY[r - 1] + rowHeights[r - 1] + GAP);
-
-  const contentW = colX[cols - 1] + colWidths[cols - 1] + GAP;
-  const contentH = rowY[rows - 1] + rowHeights[rows - 1] + GAP;
-
-  const targetWorldW = Math.max(contentW, window.innerWidth);
-  const targetWorldH = Math.max(contentH, window.innerHeight);
-
-  const offsetX = (targetWorldW - contentW) / 2;
-  const offsetY = (targetWorldH - contentH) / 2;
-
-  // Center the view on the new grid & animate bounds
   if (animate) {
-    gsap.to(worldSize, { w: targetWorldW, h: targetWorldH, duration: 1.5, ease: 'expo.inOut' });
-    gsap.to(state, { targetX: 0, targetY: 0, duration: 1.5, ease: 'expo.inOut' });
-  } else {
-    worldSize.w = targetWorldW;
-    worldSize.h = targetWorldH;
-    state.targetX = 0;
-    state.targetY = 0;
-    state.currentX = 0;
-    state.currentY = 0;
+    const cards = videoGrid.querySelectorAll('.video-card');
+    gsap.fromTo(
+      cards,
+      { opacity: 0, y: 24 },
+      { opacity: 1, y: 0, duration: 0.55, stagger: 0.05, ease: 'expo.out' }
+    );
   }
+}
 
-  visibleTiles.forEach((t, i) => {
-    t.el.style.pointerEvents = 'auto';
-    const r = Math.floor(i / cols);
-    const c = i % cols;
-    
-    const targetX = colX[c] + offsetX;
-    const targetY = rowY[r] + offsetY;
-    const targetW = colWidths[c];
-    const targetH = rowHeights[r];
+function playPreview(card, videoEl) {
+  if (!videoEl) return;
+  if (viewState.playingVideo && viewState.playingVideo !== videoEl) {
+    stopPreview(
+      viewState.playingVideo.closest('.video-card'),
+      viewState.playingVideo
+    );
+  }
+  card.classList.add('is-previewing');
+  viewState.playingVideo = videoEl;
+  const playPromise = videoEl.play();
+  if (playPromise && typeof playPromise.catch === 'function') {
+    playPromise.catch(() => {});
+  }
+}
 
-    t.w = targetW;
-    t.h = targetH;
+function stopPreview(card, videoEl) {
+  if (card) card.classList.remove('is-previewing');
+  if (videoEl) {
+    videoEl.pause();
+    try {
+      videoEl.currentTime = 0;
+    } catch (_) {}
+  }
+  if (viewState.playingVideo === videoEl) {
+    viewState.playingVideo = null;
+  }
+}
 
-    if (animate) {
-      gsap.to(t, { baseX: targetX, baseY: targetY, animScale: 1, duration: 1.5, ease: 'expo.inOut' });
-      gsap.to(t.el, { width: targetW, height: targetH, opacity: 1, duration: 1.5, ease: 'expo.inOut' });
-    } else {
-      t.baseX = targetX;
-      t.baseY = targetY;
-      t.animScale = 1;
-      t.el.style.width = `${targetW}px`;
-      t.el.style.height = `${targetH}px`;
-      t.el.style.opacity = 1;
-    }
+function stopAllPreviews() {
+  videoGrid.querySelectorAll('.video-card').forEach((card) => {
+    const v = card.querySelector('.video-card__video');
+    stopPreview(card, v);
   });
 }
 
 /* ===================================================
-   2.  RENDER LOOP — wrapping + fisheye distortion
+   4. VIDEO DETAIL OVERLAY
    =================================================== */
-function startRenderLoop() {
-  const halfW = () => window.innerWidth / 2;
-  const halfH = () => window.innerHeight / 2;
+function openVideoDetail(video) {
+  if (!projectPanel || !video) return;
+  stopAllPreviews();
+  viewState.mode = 'detail';
 
-  gsap.ticker.add(() => {
-    state.currentX += (state.targetX - state.currentX) * LERP;
-    state.currentY += (state.targetY - state.currentY) * LERP;
+  const brandHtml = video.brand
+    ? `<span class="project-panel__brand">${video.brand}</span>`
+    : '';
 
-    const hw = halfW();
-    const hh = halfH();
+  const cat = getCategory(video.category);
 
-    tiles.forEach((t) => {
-      // Toroidal wrapping
-      let x = ((t.baseX + state.currentX) % worldSize.w + worldSize.w) % worldSize.w;
-      let y = ((t.baseY + state.currentY) % worldSize.h + worldSize.h) % worldSize.h;
-      if (x > worldSize.w - t.w) x -= worldSize.w;
-      if (y > worldSize.h - t.h) y -= worldSize.h;
+  projectInner.innerHTML = `
+    <div class="project-panel__player-wrap">
+      <video
+        class="project-panel__video"
+        id="detail-video"
+        src="${video.src}"
+        poster="${video.poster}"
+        controls
+        playsinline
+        autoplay
+      ></video>
+    </div>
+    <div class="project-panel__meta">
+      ${brandHtml}
+      <h2 class="project-panel__title">${video.title}</h2>
+      <div class="project-panel__category">${cat ? cat.label : video.category}</div>
+      <p class="project-panel__desc">${video.description || ''}</p>
+      <button class="project-panel__fullscreen" id="detail-fullscreen" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+        <span>View fullscreen</span>
+      </button>
+    </div>
+  `;
 
-      t.screenX = x;
-      t.screenY = y;
+  const detailVideo = document.getElementById('detail-video');
+  viewState.detailVideoEl = detailVideo;
 
-      // --- Fisheye distortion ---
-      // Tile center in screen space
-      const cx = x + t.w / 2;
-      const cy = y + t.h / 2;
+  const fsBtn = document.getElementById('detail-fullscreen');
+  if (fsBtn && detailVideo) {
+    fsBtn.addEventListener('click', () => requestVideoFullscreen(detailVideo));
+  }
 
-      // Normalized distance from viewport center (-1 to 1)
-      const nx = (cx - hw) / hw;
-      const ny = (cy - hh) / hh;
+  projectPanel.setAttribute('aria-hidden', 'false');
+  projectPanel.classList.add('is-open');
 
-      // Clamped for tiles partially off-screen
-      const cnx = Math.max(-1.3, Math.min(1.3, nx));
-      const cny = Math.max(-1.3, Math.min(1.3, ny));
+  gsap.fromTo(
+    projectInner,
+    { opacity: 0, y: 28, scale: 0.97 },
+    { opacity: 1, y: 0, scale: 1, duration: 0.65, ease: 'expo.out' }
+  );
+}
 
-      // Distance from center (0 at center, ~1.41 at corners)
-      const dist = Math.sqrt(cnx * cnx + cny * cny);
+function requestVideoFullscreen(videoEl) {
+  if (!videoEl) return;
+  if (videoEl.requestFullscreen) {
+    videoEl.requestFullscreen();
+  } else if (videoEl.webkitEnterFullscreen) {
+    videoEl.webkitEnterFullscreen();
+  } else if (videoEl.webkitRequestFullscreen) {
+    videoEl.webkitRequestFullscreen();
+  }
+}
 
-      // Barrel distortion curves (ease-in: stronger at edges)
-      const distSq = dist * dist;
+function closeVideoDetail(restoreMode = true) {
+  if (!projectPanel.classList.contains('is-open')) return;
 
-      // Rotations: tiles at left edge rotate right (positive Y), right edge rotate left
-      const rotY = -cnx * FISHEYE_ROT_Y * Math.abs(cnx);  // quadratic curve
-      const rotX = cny * FISHEYE_ROT_X * Math.abs(cny);
+  if (viewState.detailVideoEl) {
+    viewState.detailVideoEl.pause();
+    viewState.detailVideoEl = null;
+  }
 
-      // Z push-back: corners go further back
-      const zPush = FISHEYE_Z * distSq;
+  gsap.to(projectInner, {
+    opacity: 0,
+    y: 16,
+    scale: 0.98,
+    duration: 0.35,
+    ease: 'power2.in',
+    onComplete: () => {
+      projectPanel.classList.remove('is-open');
+      projectPanel.setAttribute('aria-hidden', 'true');
+      projectInner.innerHTML = '';
+      gsap.set(projectInner, { clearProps: 'opacity,y,scale' });
+      if (restoreMode) {
+        viewState.mode = viewState.activeCategory ? 'videos' : 'categories';
+      }
+    },
+  });
+}
 
-      // Scale: shrink at edges, multiplied by animation scale
-      const baseScale = 1 + (FISHEYE_SCALE - 1) * distSq;
-      const finalScale = baseScale * (t.animScale !== undefined ? t.animScale : 1);
-
-      // Brightness dimming at edges
-      const brightness = 1 + (FISHEYE_DIM - 1) * distSq;
-
-      t.el.style.transform =
-        `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)
-         translateZ(${zPush.toFixed(1)}px)
-         rotateY(${rotY.toFixed(2)}deg)
-         rotateX(${rotX.toFixed(2)}deg)
-         scale(${finalScale.toFixed(4)})`;
-
-      // Apply brightness via filter (combines with grayscale)
-      t.el.querySelector('.tile__img').style.filter =
-        `grayscale(0.85) brightness(${(0.65 * brightness).toFixed(3)}) contrast(1.05)`;
+/* ===================================================
+   5. FILTERS + BACK
+   =================================================== */
+function initFilters() {
+  document.querySelectorAll('.filter-btn[data-filter]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const filter = btn.dataset.filter;
+      enterCategory(filter, {
+        fromFilter: viewState.mode === 'categories',
+        filterBtn: btn,
+      });
     });
   });
+
+  filterBack.addEventListener('click', () => exitToCategories());
 }
 
 /* ===================================================
-   3.  INPUT — drag on ANYTHING (tiles + gaps)
-       Click vs drag: only opens project if pointer
-       barely moved (below CLICK_THRESHOLD).
-   =================================================== */
-function initInput() {
-  let isDragging = false;
-  let startX = 0;
-  let startY = 0;
-  let lastX = 0;
-  let lastY = 0;
-  let totalDist = 0;  // total movement during this drag
-  let dragTarget = null;
-
-  // --- Pointer down: start drag from anywhere ---
-  viewport.addEventListener('pointerdown', (e) => {
-    totalDist = 0; // Reset here so it clears properly even if we click a header link!
-    if (e.target.closest('.header, .footer, .about-panel, .project-panel')) return;
-
-    isDragging = true;
-    startX = e.clientX;
-    startY = e.clientY;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    dragTarget = e.target.closest('.tile');
-    viewport.setPointerCapture(e.pointerId);
-    // Removed e.preventDefault() to allow native clicks, focus, and text selection
-  });
-
-  // --- Block native clicks if we dragged ---
-  viewport.addEventListener('click', (e) => {
-    if (totalDist >= CLICK_THRESHOLD) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  }, { capture: true });
-
-  // --- Pointer move: always drag the canvas ---
-  viewport.addEventListener('pointermove', (e) => {
-    if (!isDragging) return;
-    const dx = e.clientX - lastX;
-    const dy = e.clientY - lastY;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    totalDist += Math.abs(dx) + Math.abs(dy);
-
-    state.targetX += dx * DRAG_MULT;
-    state.targetY += dy * DRAG_MULT;
-  });
-
-  // --- Pointer up: click vs drag ---
-  viewport.addEventListener('pointerup', (e) => {
-    if (!isDragging) return;
-    isDragging = false;
-
-    // If barely moved → it's a click
-    if (totalDist < CLICK_THRESHOLD && dragTarget) {
-      const projId = dragTarget.getAttribute('data-project-id');
-      const proj = PROJECTS.find((p) => p.id === Number(projId));
-      if (proj) {
-        handleProjectClick(proj, dragTarget);
-      }
-    }
-
-    dragTarget = null;
-  });
-
-  viewport.addEventListener('pointercancel', () => {
-    isDragging = false;
-    dragTarget = null;
-  });
-
-  // --- Wheel ---
-  Observer.create({
-    target: viewport,
-    type: 'wheel',
-    onChange(self) {
-      state.targetX -= self.deltaX * 1.0;
-      state.targetY -= self.deltaY * 1.0;
-    },
-    preventDefault: true,
-  });
-}
-
-/* ===================================================
-   3b. PROJECT CLICK HANDLER
-   =================================================== */
-function handleProjectClick(project, tileEl) {
-  if (!projectPanel) return;
-  projectInner.innerHTML = `
-    <img class="project-panel__img" src="${project.img}" alt="${project.title}" />
-    <h2 class="project-panel__title">${project.title}</h2>
-    <div class="project-panel__category">${project.category}</div>
-  `;
-  projectPanel.classList.add('is-open');
-}
-
-/* ===================================================
-   4.  KEYBOARD
+   6. KEYBOARD
    =================================================== */
 function initKeyboard() {
-  const SPEED = 60;
-  const keys = {};
-  window.addEventListener('keydown', (e) => { keys[e.key] = true; });
-  window.addEventListener('keyup', (e) => { keys[e.key] = false; });
-
-  gsap.ticker.add(() => {
-    if (keys['ArrowLeft']  || keys['a']) state.targetX += SPEED;
-    if (keys['ArrowRight'] || keys['d']) state.targetX -= SPEED;
-    if (keys['ArrowUp']    || keys['w']) state.targetY += SPEED;
-    if (keys['ArrowDown']  || keys['s']) state.targetY -= SPEED;
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (viewState.mode === 'detail') {
+        closeVideoDetail();
+      } else if (viewState.mode === 'videos') {
+        exitToCategories();
+      }
+    }
   });
 }
 
 /* ===================================================
-   5.  LOADER & PRELOADER
+   7. LOADER & PRELOADER
    =================================================== */
 function preloadAssets() {
-  const images = PROJECTS.map(p => p.img);
+  const images = [
+    ...CATEGORIES.map((c) => c.cover),
+    ...VIDEOS.map((v) => v.poster),
+  ];
   let loadedCount = 0;
   const total = images.length;
-  
+
   const progressEl = document.getElementById('loader-progress');
   const ctaEl = document.getElementById('loader-cta');
-  
-  // Pre-hide items for dramatic entrance
+
   gsap.set('.header__nav', { opacity: 0, y: -30 });
   gsap.set('.footer', { opacity: 0, y: 30 });
   gsap.set('.header__left', { opacity: 0 });
-
-  tiles.forEach(t => {
-    t.animScale = 0;
-    t.el.style.opacity = 0;
-  });
+  gsap.set(categoryCards, { opacity: 0, scale: 0.9, y: 30 });
 
   const tl = gsap.timeline({ defaults: { ease: 'expo.out', duration: 1.2 } });
 
@@ -448,7 +749,6 @@ function preloadAssets() {
     if (loadedCount >= total && !isReady) {
       isReady = true;
       document.fonts.ready.then(() => {
-        // Wait for intro timeline to finish so we don't conflict
         if (tl.isActive()) {
           tl.eventCallback('onComplete', () => hideProgressAndShowCTA());
         } else {
@@ -459,20 +759,20 @@ function preloadAssets() {
   }
 
   function hideProgressAndShowCTA() {
-    gsap.to(progressEl, { 
-      opacity: 0, 
-      duration: 0.4, 
+    gsap.to(progressEl, {
+      opacity: 0,
+      duration: 0.4,
       onComplete: () => {
         ctaEl.classList.add('is-ready');
         playLoader();
-      }
+      },
     });
   }
 
   if (total === 0) {
     checkReady();
   } else {
-    images.forEach(src => {
+    images.forEach((src) => {
       const img = new Image();
       img.onload = () => {
         loadedCount++;
@@ -491,74 +791,69 @@ function preloadAssets() {
 
 function playLoader() {
   const ctaEl = document.getElementById('loader-cta');
-  
+
   gsap.to('.loader__cta > span', { y: '0%', opacity: 1, duration: 0.8 });
 
-  // Any click/scroll clears the loader
   const obs = Observer.create({
     target: window,
     type: 'pointer,wheel,touch',
     onPress: dismiss,
     onUp: dismiss,
-    onWheel: dismiss
+    onWheel: dismiss,
   });
-  
-  // Also dismiss if they click the CTA
+
   ctaEl.addEventListener('click', dismiss);
 
   function dismiss() {
     if (loaderDone) return;
     loaderDone = true;
-    
-    // Clean up observer
     obs.kill();
 
-    // Activate viewport FIRST so layout is fully calculated for accurate FLIP measurements
+    // Stop loader from blocking interactions immediately
+    loader.style.pointerEvents = 'none';
+
     viewport.classList.add('is-active');
 
-    const loaderName = document.querySelector('.loader__name');
     const loaderText = document.querySelector('.loader__line');
     const headerName = document.querySelector('.header__name');
 
-    // Elevate header above the fading loader background so it doesn't get obscured
     gsap.set('.header', { zIndex: 101 });
 
-    // Fade out tagline, CTA, progress, and loader background
-    gsap.to(['.loader__tagline', '.loader__cta', '.loader__progress'], { opacity: 0, duration: 0.5 });
-    gsap.to(loader, { backgroundColor: 'rgba(0,0,0,0)', duration: 1.2, ease: 'power2.inOut' });
-    
-    // Get exact starting bounds from the inline text element, NOT the block container
+    gsap.to(['.loader__tagline', '.loader__cta', '.loader__progress'], {
+      opacity: 0,
+      duration: 0.5,
+    });
+    gsap.to(loader, {
+      backgroundColor: 'rgba(0,0,0,0)',
+      duration: 1.2,
+      ease: 'power2.inOut',
+    });
+
     const lRect = loaderText.getBoundingClientRect();
-    
-    // Temporarily make header left visible to get true destination bounds
     gsap.set('.header__left', { opacity: 1 });
     const hRect = headerName.getBoundingClientRect();
 
-    // Lock the left edge ('Y') and vertical center
     gsap.set([loaderText, headerName], { transformOrigin: '0% 50%' });
-    
+
     const lRefX = lRect.left;
     const lRefY = lRect.top + lRect.height / 2;
     const hRefX = hRect.left;
     const hRefY = hRect.top + hRect.height / 2;
 
-    // HeaderName starts huge, anchored to the left of LoaderText, and invisible
     const headerStartScale = lRect.height / hRect.height;
     const headerStartX = lRefX - hRefX;
     const headerStartY = lRefY - hRefY;
-    gsap.set(headerName, { 
-      x: headerStartX, 
-      y: headerStartY, 
+    gsap.set(headerName, {
+      x: headerStartX,
+      y: headerStartY,
       scale: headerStartScale,
-      opacity: 0 
+      opacity: 0,
     });
 
-    // LoaderText shrinks and flies to HeaderName's position
     const loaderTargetScale = hRect.height / lRect.height;
     const loaderTargetX = hRefX - lRefX;
     const loaderTargetY = hRefY - lRefY;
 
-    // Crossfade them smoothly along the exact same trajectory
     gsap.to(headerName, {
       x: 0,
       y: 0,
@@ -569,7 +864,8 @@ function playLoader() {
       onComplete: () => {
         loader.style.display = 'none';
         gsap.set(headerName, { clearProps: 'transform,opacity' });
-      }
+        gsap.set('.header', { clearProps: 'zIndex' });
+      },
     });
 
     gsap.to(loaderText, {
@@ -578,58 +874,32 @@ function playLoader() {
       scale: loaderTargetScale,
       opacity: 0,
       duration: 1.2,
-      ease: 'expo.inOut'
+      ease: 'expo.inOut',
     });
 
-    // Tiles pop in from the center!
-    gsap.to(tiles, {
-      animScale: 1,
-      duration: 1.5,
-      stagger: { amount: 0.8, from: 'center' },
-      ease: 'back.out(1.5)',
-      delay: 0.3
-    });
-    
-    gsap.to(tiles.map(t => t.el), {
+    gsap.to(categoryCards, {
       opacity: 1,
-      duration: 1.5,
-      stagger: { amount: 0.8, from: 'center' },
-      ease: 'power2.out',
-      delay: 0.3
+      scale: 1,
+      y: 0,
+      duration: 1.1,
+      stagger: 0.1,
+      ease: 'expo.out',
+      delay: 0.35,
     });
 
-    // Reveal header nav and footer smoothly
     gsap.to(['.header__nav', '.footer'], {
       y: 0,
       opacity: 1,
       duration: 1.2,
       stagger: 0.2,
       ease: 'expo.out',
-      delay: 0.6
+      delay: 0.6,
     });
   }
 }
 
 /* ===================================================
-   6.  FILTERS
-   =================================================== */
-function initFilters() {
-  const buttons = document.querySelectorAll('.filter-btn');
-  buttons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const filter = btn.dataset.filter;
-      if (filter === activeFilter) return;
-      activeFilter = filter;
-      buttons.forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-      
-      layoutGrid(true); // Animate layout
-    });
-  });
-}
-
-/* ===================================================
-   7.  ROUTING
+   8. ROUTING (About) — preserved from prior design
    =================================================== */
 function initRouting() {
   let aboutAnimated = false;
@@ -645,15 +915,13 @@ function initRouting() {
   function getAboutTarget() {
     const isMobile = window.innerWidth <= 768;
     return isMobile
-      ? (document.getElementById('about-name-mobile') || document.getElementById('about-name'))
+      ? document.getElementById('about-name-mobile') || document.getElementById('about-name')
       : document.getElementById('about-name');
   }
 
-  // --- Mobile 3D Card Flip interaction ---
   if (cardFlipper) {
     cardFlipper.addEventListener('click', (e) => {
       if (window.innerWidth > 768) return;
-      // Do not flip if clicked on a link or social button
       if (e.target.closest('a, .about-panel__social')) return;
       cardFlipper.classList.toggle('is-flipped');
     });
@@ -667,7 +935,6 @@ function initRouting() {
     });
   }
 
-  // --- Social Brand Hover Card Hue Sync (Desktop + Mobile) ---
   const socialButtons = aboutPanel.querySelectorAll('.about-panel__social');
   socialButtons.forEach((btn) => {
     const brand = btn.dataset.brand;
@@ -687,14 +954,13 @@ function initRouting() {
     });
   });
 
-  // --- 3D photo tilt on mouse move (Desktop) ---
   function onPhotoMove(e) {
     if (!photoTiltActive || !photoWrap || window.innerWidth <= 768) return;
     const rect = photoWrap.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;   // 0..1
-    const y = (e.clientY - rect.top) / rect.height;    // 0..1
-    const rotY = (x - 0.5) * 20;   // -10 to +10 deg
-    const rotX = (0.5 - y) * 20;   // -10 to +10 deg
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    const rotY = (x - 0.5) * 20;
+    const rotX = (0.5 - y) * 20;
     gsap.to(photo, {
       rotateX: rotX,
       rotateY: rotY,
@@ -728,36 +994,24 @@ function initRouting() {
     aboutAnimated = true;
     photoTiltActive = true;
 
-    // Reset flipper to front face whenever opened
-    if (cardFlipper) {
-      cardFlipper.classList.remove('is-flipped');
-    }
+    if (cardFlipper) cardFlipper.classList.remove('is-flipped');
 
     const aboutName = getAboutTarget();
-
-    // --- Crossfade FLIP (same technique as loader → header) ---
-    // Both elements share transformOrigin: '0% 50%' so they scale from the left edge
-
-    // 1. Measure header name (the "source")
     const hRect = headerName.getBoundingClientRect();
 
-    // 2. Temporarily show panel to measure about name (the "destination")
     aboutPanel.style.visibility = 'visible';
     aboutPanel.style.opacity = '0';
     aboutPanel.style.transition = 'none';
     gsap.set(aboutName, { opacity: 1, x: 0, y: 0, scale: 1 });
     const aRect = aboutName.getBoundingClientRect();
 
-    // 3. Lock transform origins
     gsap.set([headerName, aboutName], { transformOrigin: '0% 50%' });
 
-    // Reference points (left edge, vertical center)
     const hRefX = hRect.left;
     const hRefY = hRect.top + hRect.height / 2;
     const aRefX = aRect.left;
     const aRefY = aRect.top + aRect.height / 2;
 
-    // 4. aboutName starts at headerName's position/size (scaled up from header)
     const aboutStartScale = hRect.height / aRect.height;
     const aboutStartX = hRefX - aRefX;
     const aboutStartY = hRefY - aRefY;
@@ -768,58 +1022,66 @@ function initRouting() {
       opacity: 0,
     });
 
-    // 5. headerName will shrink and fly TO aboutName's position
     const headerTargetScale = aRect.height / hRect.height;
     const headerTargetX = aRefX - hRefX;
     const headerTargetY = aRefY - hRefY;
 
-    // 6. Pre-set photo and reveals
     gsap.set(photo, { scale: 1.3, clipPath: 'inset(100% 0% 0% 0%)' });
     const reveals = aboutPanel.querySelectorAll('.about-reveal');
     gsap.set(reveals, { opacity: 0, y: 25 });
 
-    // 7. Open the panel
     aboutPanel.style.removeProperty('visibility');
     aboutPanel.style.removeProperty('opacity');
     aboutPanel.style.removeProperty('transition');
     aboutPanel.classList.add('is-open');
 
     const isMobile = window.innerWidth <= 768;
-    const aboutCard = document.getElementById('about-card');
     const openDuration = isMobile ? 0.7 : 1.2;
 
     if (isMobile && aboutCard) {
-      gsap.fromTo(aboutCard,
+      gsap.fromTo(
+        aboutCard,
         { opacity: 0, scale: 0.94, y: 30 },
         { opacity: 1, scale: 1, y: 0, duration: 0.7, ease: 'expo.out', delay: 0.08 }
       );
     }
 
-    // 8. Crossfade: aboutName grows in, headerName shrinks out (same path)
     gsap.to(aboutName, {
-      x: 0, y: 0, scale: 1, opacity: 1,
-      duration: openDuration, ease: 'expo.inOut',
+      x: 0,
+      y: 0,
+      scale: 1,
+      opacity: 1,
+      duration: openDuration,
+      ease: 'expo.inOut',
     });
 
     gsap.to(headerName, {
-      x: headerTargetX, y: headerTargetY, scale: headerTargetScale, opacity: 0,
-      duration: openDuration, ease: 'expo.inOut',
+      x: headerTargetX,
+      y: headerTargetY,
+      scale: headerTargetScale,
+      opacity: 0,
+      duration: openDuration,
+      ease: 'expo.inOut',
       onComplete: () => {
         gsap.set(headerName, { clearProps: 'transform' });
-        // opacity stays 0 — header name stays hidden while about is open
-      }
+      },
     });
 
-    // Photo: clip-path wipe reveal + zoom out
     gsap.to(photo, {
-      scale: 1, clipPath: 'inset(0% 0% 0% 0%)',
-      duration: 1.4, ease: 'expo.inOut', delay: 0.1,
+      scale: 1,
+      clipPath: 'inset(0% 0% 0% 0%)',
+      duration: 1.4,
+      ease: 'expo.inOut',
+      delay: 0.1,
     });
 
-    // Staggered reveal for the rest
     gsap.to(reveals, {
-      opacity: 1, y: 0,
-      duration: 1, stagger: 0.1, ease: 'expo.out', delay: 0.4,
+      opacity: 1,
+      y: 0,
+      duration: 1,
+      stagger: 0.1,
+      ease: 'expo.out',
+      delay: 0.4,
     });
   }
 
@@ -833,10 +1095,8 @@ function initRouting() {
     aboutAnimated = false;
 
     const isMobile = window.innerWidth <= 768;
-    const aboutCard = document.getElementById('about-card');
     const aboutName = getAboutTarget();
 
-    // On mobile: immediately animate the card down and out of the way!
     if (isMobile && aboutCard) {
       gsap.to(aboutCard, {
         opacity: 0,
@@ -847,25 +1107,19 @@ function initRouting() {
       });
     }
 
-    // --- Reverse crossfade FLIP ---
-    // 1. Measure both positions
     const aRect = aboutName.getBoundingClientRect();
 
-    // We need the header's natural position — temporarily restore it
     gsap.set(headerName, { clearProps: 'transform,opacity' });
     gsap.set(headerName, { opacity: 1 });
     const hRect = headerName.getBoundingClientRect();
 
-    // Lock transform origins
     gsap.set([headerName, aboutName], { transformOrigin: '0% 50%' });
 
-    // Reference points
     const hRefX = hRect.left;
     const hRefY = hRect.top + hRect.height / 2;
     const aRefX = aRect.left;
     const aRefY = aRect.top + aRect.height / 2;
 
-    // 2. headerName starts at aboutName's position/size (scaled up)
     const headerStartScale = aRect.height / hRect.height;
     const headerStartX = aRefX - hRefX;
     const headerStartY = aRefY - hRefY;
@@ -876,57 +1130,58 @@ function initRouting() {
       opacity: 0,
     });
 
-    // 3. aboutName will shrink and fly TO headerName's position
     const aboutTargetScale = hRect.height / aRect.height;
     const aboutTargetX = hRefX - aRefX;
     const aboutTargetY = hRefY - aRefY;
 
-    // 4. Fade out reveals and photo
     const reveals = aboutPanel.querySelectorAll('.about-reveal');
     gsap.to(reveals, { opacity: 0, y: -15, duration: 0.4, ease: 'power2.in' });
     gsap.to(photo, {
-      clipPath: 'inset(0% 0% 100% 0%)', scale: 1.1,
-      duration: 0.6, ease: 'power2.in',
+      clipPath: 'inset(0% 0% 100% 0%)',
+      scale: 1.1,
+      duration: 0.6,
+      ease: 'power2.in',
     });
 
-    // On mobile: quick, crisp 0.55s transition with zero delay!
-    // On desktop: keep the original 1.2s luxurious transition
     const closeDuration = isMobile ? 0.55 : 1.2;
     const closeEase = isMobile ? 'power3.out' : 'expo.inOut';
 
-    // 5. Crossfade: aboutName shrinks out, headerName grows in (same path)
     gsap.to(aboutName, {
-      x: aboutTargetX, y: aboutTargetY, scale: aboutTargetScale, opacity: 0,
-      duration: closeDuration, ease: closeEase,
+      x: aboutTargetX,
+      y: aboutTargetY,
+      scale: aboutTargetScale,
+      opacity: 0,
+      duration: closeDuration,
+      ease: closeEase,
     });
 
     gsap.to(headerName, {
-      x: 0, y: 0, scale: 1, opacity: 1,
-      duration: closeDuration, ease: closeEase,
+      x: 0,
+      y: 0,
+      scale: 1,
+      opacity: 1,
+      duration: closeDuration,
+      ease: closeEase,
       onComplete: () => {
         gsap.set(headerName, { clearProps: 'transform' });
-        // Clean up about panel — skip CSS transition, hide instantly
         aboutPanel.style.transition = 'none';
         aboutPanel.classList.remove('is-open');
         if (aboutCard) {
           gsap.set(aboutCard, { clearProps: 'opacity,scale,y' });
           aboutCard.removeAttribute('data-active-brand');
         }
-        if (cardFlipper) {
-          cardFlipper.classList.remove('is-flipped');
-        }
+        if (cardFlipper) cardFlipper.classList.remove('is-flipped');
         gsap.set(aboutName, { opacity: 0, clearProps: 'x,y,scale,transformOrigin' });
         gsap.set(photo, { clearProps: 'clipPath,scale,rotateX,rotateY' });
         gsap.set(reveals, { opacity: 0, y: 25 });
+        const backdrop = aboutPanel.querySelector('.about-panel__backdrop');
         gsap.set(backdrop, { clearProps: 'opacity' });
-        // Re-enable transition for next open
         requestAnimationFrame(() => {
           aboutPanel.style.removeProperty('transition');
         });
-      }
+      },
     });
 
-    // 6. Fade out backdrop
     const backdrop = aboutPanel.querySelector('.about-panel__backdrop');
     const backdropDuration = isMobile ? 0.45 : 0.8;
     gsap.to(backdrop, { opacity: 0, duration: backdropDuration, ease: 'power2.inOut' });
@@ -942,28 +1197,42 @@ function initRouting() {
       openAbout();
     } else {
       closeAbout();
+      // Portfolio nav also resets to categories if deep in videos
+      if (hash === '#portfolio' && viewState.mode === 'videos' && !viewState.transitioning) {
+        // stay in videos unless user explicitly wants home — only exit if coming from about
+      }
     }
   }
 
   window.addEventListener('hashchange', handleHash);
   handleHash();
 
-  // Click backdrop to close
-  aboutClose.addEventListener('click', () => { window.location.hash = '#portfolio'; });
+  aboutClose.addEventListener('click', () => {
+    window.location.hash = '#portfolio';
+  });
+
+  // Portfolio link: if already on portfolio and in videos, go back to categories
+  const portfolioLink = header.querySelector('a[href="#portfolio"]');
+  if (portfolioLink) {
+    portfolioLink.addEventListener('click', (e) => {
+      if ((window.location.hash || '#portfolio') === '#portfolio') {
+        if (viewState.mode === 'detail') {
+          e.preventDefault();
+          closeVideoDetail();
+        } else if (viewState.mode === 'videos') {
+          e.preventDefault();
+          exitToCategories();
+        }
+      }
+    });
+  }
 
   if (projectClose) {
-    projectClose.addEventListener('click', () => { projectPanel.classList.remove('is-open'); });
+    projectClose.addEventListener('click', () => closeVideoDetail());
   }
-}
 
-/* ===================================================
-   8.  RESIZE
-   =================================================== */
-function initResize() {
-  let timer;
-  window.addEventListener('resize', () => {
-    clearTimeout(timer);
-    timer = setTimeout(buildGrid, 200);
+  projectPanel.addEventListener('click', (e) => {
+    if (e.target === projectPanel) closeVideoDetail();
   });
 }
 
@@ -971,13 +1240,10 @@ function initResize() {
    INIT
    =================================================== */
 function init() {
-  buildGrid();
-  startRenderLoop();
-  initInput();
-  initKeyboard();
+  buildCategoryView();
   initFilters();
+  initKeyboard();
   initRouting();
-  initResize();
   preloadAssets();
 }
 

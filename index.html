@@ -34,9 +34,18 @@
 
       <!-- ====== MAIN EXPERIENCE ====== -->
       <div class="viewport" id="viewport">
-        <!-- Infinite wrapping canvas -->
-        <div class="canvas" id="canvas">
-          <!-- tiles injected by JS -->
+        <div class="portfolio" id="portfolio">
+          <div class="category-view" id="category-view">
+            <!-- category cards injected by JS -->
+          </div>
+          <div class="video-view" id="video-view" hidden>
+            <div class="video-view__header">
+              <h2 class="video-view__title" id="video-view-title"></h2>
+            </div>
+            <div class="video-grid" id="video-grid">
+              <!-- video cards injected by JS -->
+            </div>
+          </div>
         </div>
       </div>
 
@@ -56,15 +65,15 @@
         <div class="footer__left">
           <span class="footer__count" id="tile-count"></span>
         </div>
-        <div class="footer__center">
-          <button class="filter-btn active" data-filter="all">All</button>
-          <button class="filter-btn" data-filter="branding">Branding</button>
-          <button class="filter-btn" data-filter="editorial">Editorial</button>
-          <button class="filter-btn" data-filter="digital">Digital</button>
-          <button class="filter-btn" data-filter="motion">Motion</button>
+        <div class="footer__center" id="footer-filters">
+          <button class="filter-btn filter-btn--back" id="filter-back" type="button" hidden>Back</button>
+          <button class="filter-btn" data-filter="branding" type="button">Branding</button>
+          <button class="filter-btn" data-filter="editorial" type="button">Editorial</button>
+          <button class="filter-btn" data-filter="digital" type="button">Digital</button>
+          <button class="filter-btn" data-filter="motion" type="button">Motion</button>
         </div>
         <div class="footer__right">
-          <span class="footer__hint">Drag to explore</span>
+          <span class="footer__hint" id="footer-hint">Select a category</span>
         </div>
       </footer>
 
@@ -98,13 +107,9 @@
                   <p class="about-card__tagline">Digital experiences, visual direction &amp; branding.</p>
 
                   <div class="about-panel__socials about-card__mobile-socials">
-                    <a href="mailto:hello@yosroffscript.com" class="about-panel__social" data-brand="email" aria-label="Email">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                      <span class="about-panel__tooltip">hello@yosr</span>
-                    </a>
-                    <a href="https://www.instagram.com/__yosr__/" target="_blank" rel="noopener noreferrer" class="about-panel__social" data-brand="instagram" aria-label="Instagram">
+                    <a href="https://www.instagram.com/yosroffscript" target="_blank" rel="noopener noreferrer" class="about-panel__social" data-brand="instagram" aria-label="Instagram">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none"/></svg>
-                      <span class="about-panel__tooltip">__yosr__</span>
+                      <span class="about-panel__tooltip">yosroffscript</span>
                     </a>
                     <a href="https://www.linkedin.com/in/yosr-al-gabbas-8a11bb249/" target="_blank" rel="noopener noreferrer" class="about-panel__social" data-brand="linkedin" aria-label="LinkedIn">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
@@ -136,7 +141,7 @@
                     <span>Branding</span>
                     <span>Editorial</span>
                     <span>Digital</span>
-                    <span>Direction</span>
+                    <span>Motion</span>
                   </div>
                 </div>
               </div>
@@ -157,13 +162,9 @@
             </p>
 
             <div class="about-panel__socials about-reveal">
-              <a href="mailto:hello@yosroffscript.com" class="about-panel__social" data-brand="email" aria-label="Email">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                <span class="about-panel__tooltip">hello@yosr</span>
-              </a>
-              <a href="https://www.instagram.com/__yosr__/" target="_blank" rel="noopener noreferrer" class="about-panel__social" data-brand="instagram" aria-label="Instagram">
+              <a href="https://www.instagram.com/yosroffscript" target="_blank" rel="noopener noreferrer" class="about-panel__social" data-brand="instagram" aria-label="Instagram">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none"/></svg>
-                <span class="about-panel__tooltip">__yosr__</span>
+                <span class="about-panel__tooltip">yosroffscript</span>
               </a>
               <a href="https://www.linkedin.com/in/yosr-al-gabbas-8a11bb249/" target="_blank" rel="noopener noreferrer" class="about-panel__social" data-brand="linkedin" aria-label="LinkedIn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
@@ -175,13 +176,16 @@
         </div>
       </section>
 
-      <!-- Project panel -->
-      <section class="project-panel" id="project-panel">
-        <button class="project-panel__close" id="project-close">&times;</button>
+      <!-- Video detail panel -->
+      <section class="project-panel" id="project-panel" aria-hidden="true">
+        <button class="project-panel__close" id="project-close" type="button" aria-label="Close">&times;</button>
         <div class="project-panel__inner" id="project-inner">
-          <!-- Dynamic project content injected by JS -->
+          <!-- Dynamic video content injected by JS -->
         </div>
       </section>
+
+      <!-- FLIP morph ghost (filter → card) -->
+      <div class="flip-ghost" id="flip-ghost" aria-hidden="true"></div>
     </div>
 
     <script type="module" src="/src/main.js"></script>
