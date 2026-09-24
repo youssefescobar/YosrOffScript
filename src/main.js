@@ -1434,11 +1434,11 @@ const MIN_LOADER_MS = 3600;
 const HOLD_AT_FULL_MS = 700;
 
 const TAGLINE_WORDS = [
-  'Storyteller',
-  'Designer',
-  'Director',
-  'Artist',
-  'Narrator',
+  'Bitch',
+  'Unthankfull Bitch',
+  'i aint removing this Bitch',
+  'go fuck yourself Bitch',
+  'sToRy TELleR',
 ];
 
 let taglineCycleTween = null;
@@ -1447,7 +1447,7 @@ function startTaglineCycle() {
   const cycle = document.querySelector('.loader__tagline-cycle');
   if (!cycle || taglineCycleTween) return;
 
-  let index = 0;
+  let index = -1;
   let current = cycle.querySelector('.loader__tagline-word');
   if (!current) return;
 
