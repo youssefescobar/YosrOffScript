@@ -1433,6 +1433,61 @@ function initKeyboard() {
 const MIN_LOADER_MS = 3600;
 const HOLD_AT_FULL_MS = 700;
 
+const TAGLINE_WORDS = [
+  'Storyteller',
+  'Designer',
+  'Director',
+  'Artist',
+  'Narrator',
+];
+
+let taglineCycleTween = null;
+
+function startTaglineCycle() {
+  const cycle = document.querySelector('.loader__tagline-cycle');
+  if (!cycle || taglineCycleTween) return;
+
+  let index = 0;
+  let current = cycle.querySelector('.loader__tagline-word');
+  if (!current) return;
+
+  const tick = () => {
+    if (loaderDone || !document.contains(current)) return;
+
+    const next = (index + 1) % TAGLINE_WORDS.length;
+    const incoming = document.createElement('span');
+    incoming.className = 'loader__tagline-word';
+    incoming.textContent = TAGLINE_WORDS[next];
+    cycle.appendChild(incoming);
+    gsap.set(incoming, { yPercent: 110, opacity: 0 });
+
+    const outgoing = current;
+    gsap
+      .timeline({
+        defaults: { ease: 'expo.inOut', overwrite: 'auto' },
+        onComplete: () => {
+          outgoing.remove();
+          current = incoming;
+          index = next;
+          if (!loaderDone) {
+            taglineCycleTween = gsap.delayedCall(1.75, tick);
+          }
+        },
+      })
+      .to(outgoing, { yPercent: -110, opacity: 0, duration: 0.75 }, 0)
+      .to(incoming, { yPercent: 0, opacity: 1, duration: 0.75 }, 0.06);
+  };
+
+  taglineCycleTween = gsap.delayedCall(1.8, tick);
+}
+
+function stopTaglineCycle() {
+  if (taglineCycleTween) {
+    taglineCycleTween.kill();
+    taglineCycleTween = null;
+  }
+}
+
 function unique(list) {
   return [...new Set(list.filter(Boolean))];
 }
@@ -1508,8 +1563,9 @@ function preloadAssets() {
   const tl = gsap.timeline({ defaults: { ease: 'expo.out', duration: 1.2 } });
 
   tl.to('.loader__line > span', { y: '0%', stagger: 0.12, duration: 1 })
-    .to('.loader__tagline > span', { y: '0%', duration: 0.8 }, '-=0.5')
-    .to(progressEl, { opacity: 1, duration: 0.5 }, '-=0.3');
+    .to('.loader__tagline-line', { y: '0%', duration: 0.8 }, '-=0.5')
+    .to(progressEl, { opacity: 1, duration: 0.5 }, '-=0.3')
+    .add(() => startTaglineCycle(), '-=0.1');
 
   // Weighted progress: images dominate, then film warm-up, then fonts
   const weights = {
@@ -1657,6 +1713,7 @@ function playLoader() {
     if (loaderDone) return;
     loaderDone = true;
     obs.kill();
+    stopTaglineCycle();
 
     // Stop loader from blocking interactions immediately
     loader.style.pointerEvents = 'none';
