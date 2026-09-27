@@ -110,34 +110,9 @@ img, video { display: block; max-width: 100%; }
 }
 
 .loader__tagline-line {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.45em;
+  display: inline-block;
   overflow: hidden;
   transform: translateY(110%);
-}
-
-.loader__tagline-fixed {
-  display: inline-block;
-  color: var(--color-text-muted);
-}
-
-.loader__tagline-cycle {
-  position: relative;
-  display: inline-grid;
-  min-width: 12ch;
-  height: 1.35em;
-  overflow: hidden;
-  vertical-align: baseline;
-  text-align: left;
-}
-
-.loader__tagline-word {
-  grid-area: 1 / 1;
-  display: block;
-  color: var(--color-accent);
-  white-space: nowrap;
-  will-change: transform, opacity;
 }
 
 .loader__progress {
