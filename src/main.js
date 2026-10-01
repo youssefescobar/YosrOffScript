@@ -710,7 +710,6 @@ function populateVideoGrid(categoryId, animate = false) {
     const card = document.createElement('article');
     card.className = 'video-card';
     card.setAttribute('data-video-id', video.id);
-    card.style.setProperty('--card-aspect', video.aspect);
     card.classList.toggle('is-landscape', video.aspect > 1);
     card.tabIndex = 0;
 
@@ -840,23 +839,41 @@ function populateVideoGrid(categoryId, animate = false) {
   }
 }
 
-/* Desktop / tablet: choose rows + tile size so every film fits on screen at
-   once, whole (no crop), as large as possible. Phones keep the scrolling
-   2-column grid. */
-const TILE_GAP = 8;
-const MAX_TILE_H = 640;
+/* Desktop / tablet: tile the whole screen edge to edge, no gaps, no scroll.
+   Picks the column count whose tiles are closest to a pleasant shape
+   (portrait ~3:4, landscape clips ~16:10 and double width). Rows stretch, so
+   a short last row has no holes. Phones keep the scrolling 2-column grid. */
+const PORTRAIT_TARGET = 0.75;
+const LANDSCAPE_TARGET = 1.6;
 let _fitSignature = '';
+
+function packRows(weights, cols) {
+  const rows = [];
+  let row = [];
+  let sum = 0;
+  weights.forEach((w, i) => {
+    if (row.length && sum + w > cols) {
+      rows.push(row);
+      row = [];
+      sum = 0;
+    }
+    row.push(i);
+    sum += w;
+  });
+  if (row.length) rows.push(row);
+  return rows;
+}
 
 function fitVideoGrid() {
   if (!videoGrid) return;
   const cards = Array.from(videoGrid.querySelectorAll('.video-card'));
   if (!cards.length) return;
+  const weights = cards.map((c) => (c.classList.contains('is-landscape') ? 2 : 1));
 
   if (window.matchMedia('(max-width: 768px)').matches) {
-    // Phone: flat scrolling grid, sizes come from CSS
     if (_fitSignature !== 'flat') {
       cards.forEach((c) => {
-        c.style.width = '';
+        c.style.removeProperty('--tile-weight');
         videoGrid.appendChild(c);
       });
       videoGrid.querySelectorAll('.video-row').forEach((r) => r.remove());
@@ -865,60 +882,43 @@ function fitVideoGrid() {
     // Explicit heights: with aspect-ratio alone the grid rows collapse
     // (overflow:hidden tiles) and each tile ends up overlapped by the next.
     const colW = videoGrid.clientWidth / 2;
-    cards.forEach((c) => {
-      const a = Number(c.style.getPropertyValue('--card-aspect')) || 9 / 16;
-      const w = c.classList.contains('is-landscape') ? colW * 2 : colW;
-      c.style.height = colW ? `${Math.round(w / a)}px` : '';
+    cards.forEach((c, i) => {
+      c.style.height = colW ? `${Math.round(weights[i] === 2 ? colW * 2 * (9 / 16) : colW * 1.25)}px` : '';
     });
     return;
   }
 
-  const cs = getComputedStyle(videoGrid);
-  const availW =
-    videoGrid.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-  const availH =
-    videoGrid.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-  if (availW <= 0 || availH <= 0) return;
+  const W = videoGrid.clientWidth;
+  const H = videoGrid.clientHeight;
+  if (W <= 0 || H <= 0) return;
 
-  const aspects = cards.map((c) => Number(c.style.getPropertyValue('--card-aspect')) || 9 / 16);
-  const n = cards.length;
-
-  // Try every row count; keep the layout with the tallest tiles.
+  const totalSlots = weights.reduce((a, b) => a + b, 0);
   let best = null;
-  for (let rows = 1; rows <= n; rows++) {
-    const base = Math.floor(n / rows);
-    const extra = n % rows;
-    const sizes = Array.from({ length: rows }, (_, i) => base + (i < extra ? 1 : 0));
-    let idx = 0;
-    let widest = 0;
-    const groups = sizes.map((k) => {
-      const g = [];
-      let sum = 0;
-      for (let j = 0; j < k; j++) {
-        g.push(idx);
-        sum += aspects[idx++];
-      }
-      widest = Math.max(widest, sum);
-      return { g, sum, k };
+  for (let cols = 1; cols <= totalSlots; cols++) {
+    const rows = packRows(weights, cols);
+    const tileH = H / rows.length;
+    let score = 0;
+    const rowSums = rows.map((r) => r.reduce((a, i) => a + weights[i], 0));
+    rows.forEach((r, ri) => {
+      r.forEach((i) => {
+        const tileW = (W * weights[i]) / rowSums[ri];
+        const target = weights[i] === 2 ? LANDSCAPE_TARGET : PORTRAIT_TARGET;
+        score += Math.abs(Math.log(tileW / tileH / target));
+      });
     });
-    const gapW = Math.max(...sizes) - 1;
-    // widest row: h*sum + gaps = availW
-    const hByW = widest ? (availW - gapW * TILE_GAP) / widest : Infinity;
-    const hByH = (availH - (rows - 1) * TILE_GAP) / rows;
-    const h = Math.min(hByW, hByH, MAX_TILE_H);
-    if (!best || h > best.h + 0.5) best = { h, groups };
+    score /= cards.length;
+    if (new Set(rowSums).size > 1) score += 0.12; // uneven rows look less tidy
+    if (!best || score < best.score - 1e-6) best = { score, rows };
   }
 
-  const h = Math.max(80, Math.floor(best.h));
-  const signature = best.groups.map((g) => g.g.join('.')).join('|');
-
+  const signature = best.rows.map((r) => r.join('.')).join('|');
   if (signature !== _fitSignature) {
     const wasPlaying = cards.filter((c) => c.classList.contains('is-playing'));
     videoGrid.querySelectorAll('.video-row').forEach((r) => r.remove());
-    best.groups.forEach(({ g }) => {
+    best.rows.forEach((r) => {
       const row = document.createElement('div');
       row.className = 'video-row';
-      g.forEach((i) => row.appendChild(cards[i]));
+      r.forEach((i) => row.appendChild(cards[i]));
       videoGrid.appendChild(row);
     });
     _fitSignature = signature;
@@ -930,8 +930,8 @@ function fitVideoGrid() {
   }
 
   cards.forEach((c, i) => {
-    c.style.height = `${h}px`;
-    c.style.width = `${Math.floor(h * aspects[i])}px`;
+    c.style.height = '';
+    c.style.setProperty('--tile-weight', weights[i]);
   });
 }
 
@@ -1037,7 +1037,7 @@ function metaPoseVars(hover) {
   }
   return {
     ...META_IDLE,
-    scale: mobile ? 1.12 : 1.72,
+    scale: mobile ? 1 : 1.2,
   };
 }
 

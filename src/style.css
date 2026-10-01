@@ -321,9 +321,7 @@ img, video { display: block; max-width: 100%; }
 .video-card {
   position: relative;
   width: 100%;
-  /* Tile matches the clip's own shape (set per video in main.js), so
-     nothing is cropped. Landscape clips span two columns. */
-  aspect-ratio: var(--card-aspect, 9 / 16);
+  aspect-ratio: 4 / 5;
   overflow: hidden;
   background: #050505;
   cursor: pointer;
@@ -338,29 +336,30 @@ img, video { display: block; max-width: 100%; }
   grid-column: span 2;
 }
 
-/* Desktop / tablet: every film is shown whole on one screen. main.js
-   (fitVideoGrid) picks the rows and sizes each tile to its clip's shape. */
+/* Desktop / tablet: the tiles tile the whole screen edge to edge, no gaps,
+   no scrolling. main.js (fitVideoGrid) picks the rows/columns for the number
+   of films; rows stretch so the last row is never left with holes. */
 @media (min-width: 769px) {
   .video-grid {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: var(--tile-gap, 8px);
-    padding: calc(var(--header-h) + 8px) 24px calc(var(--footer-h) + 8px);
     overflow: hidden;
     scroll-snap-type: none;
   }
 
   .video-row {
     display: flex;
-    justify-content: center;
-    gap: var(--tile-gap, 8px);
+    flex: 1 1 0;
+    min-height: 0;
   }
 
   .video-card,
   .video-card.is-landscape {
-    flex: none;
+    flex: var(--tile-weight, 1) 1 0;
+    min-width: 0;
+    width: auto;
+    height: auto;
+    aspect-ratio: auto;
     grid-column: auto;
   }
 }
@@ -459,11 +458,11 @@ img, video { display: block; max-width: 100%; }
   will-change: transform;
 }
 
-/* Desktop idle pose scales the title ~1.7x (GSAP): cap the unscaled width so
+/* Desktop idle pose scales the title ~1.2x (GSAP): cap the unscaled width so
    long titles wrap inside the tile instead of being clipped by its edges. */
 @media (min-width: 769px) {
   .video-card:not(.is-hover) .video-card__meta-inner {
-    max-width: min(48%, 280px);
+    max-width: min(70%, 280px);
   }
 }
 
@@ -480,7 +479,7 @@ img, video { display: block; max-width: 100%; }
 
 .video-card__title {
   /* Fixed size — idle “big” look comes from meta-inner scale */
-  font-size: clamp(0.95rem, 1.4vw, 1.3rem);
+  font-size: clamp(0.8rem, 1.05vw, 1rem);
   font-weight: 300;
   letter-spacing: 0.02em;
   line-height: 1.1;
@@ -1122,7 +1121,7 @@ img, video { display: block; max-width: 100%; }
 
 /* Landscape (16:9) films: wider player, never cropped */
 .project-panel__inner.is-landscape {
-  max-width: 1100px;
+  max-width: min(1280px, 94vw);
   grid-template-columns: minmax(0, 1.7fr) minmax(220px, 1fr);
 }
 
@@ -1131,7 +1130,7 @@ img, video { display: block; max-width: 100%; }
 }
 
 .is-landscape .project-panel__video {
-  max-height: min(60vh, 560px);
+  max-height: min(72vh, 720px);
   object-fit: contain;
 }
 
