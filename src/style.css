@@ -300,30 +300,6 @@ img, video { display: block; max-width: 100%; }
   padding: 0;
 }
 
-.video-view__header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: var(--header-h);
-  z-index: var(--z-header);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.video-view__title {
-  font-size: 0.7rem;
-  font-weight: 400;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  padding: 0;
-  background: transparent;
-  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6);
-}
-
 .video-grid {
   flex: 1;
   min-height: 0;
@@ -345,7 +321,9 @@ img, video { display: block; max-width: 100%; }
 .video-card {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 5;
+  /* Tile matches the clip's own shape (set per video in main.js), so
+     nothing is cropped. Landscape clips span two columns. */
+  aspect-ratio: var(--card-aspect, 9 / 16);
   overflow: hidden;
   background: #050505;
   cursor: pointer;
@@ -354,6 +332,10 @@ img, video { display: block; max-width: 100%; }
   scroll-snap-align: start;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+}
+
+.video-card.is-landscape {
+  grid-column: span 2;
 }
 
 .video-card.is-detail-source {
@@ -1283,11 +1265,6 @@ img, video { display: block; max-width: 100%; }
     font-size: 0.9rem;
   }
 
-  /* Hide category title on mobile — nav + grid only */
-  .video-view__header {
-    display: none;
-  }
-
   /* Grid bleeds under translucent header/footer like desktop */
   .video-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -1295,11 +1272,6 @@ img, video { display: block; max-width: 100%; }
     padding: 0;
     scroll-padding-top: var(--header-h);
     scroll-padding-bottom: var(--footer-h);
-  }
-
-  .video-card {
-    width: 100%;
-    aspect-ratio: 4 / 5;
   }
 
   .video-card__meta-inner {

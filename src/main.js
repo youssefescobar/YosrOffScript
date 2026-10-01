@@ -19,7 +19,6 @@ const viewport = document.getElementById('viewport');
 const categoryView = document.getElementById('category-view');
 const videoView = document.getElementById('video-view');
 const videoGrid = document.getElementById('video-grid');
-const videoViewTitle = document.getElementById('video-view-title');
 const tileCountEl = document.getElementById('tile-count');
 const footerHint = document.getElementById('footer-hint');
 const filterBack = document.getElementById('filter-back');
@@ -388,7 +387,6 @@ function switchVideoCategory(categoryId) {
   updateFooterForVideos(categoryId);
 
   const oldCards = Array.from(videoGrid.querySelectorAll('.video-card'));
-  const titleEl = videoViewTitle;
 
   const finishIn = () => {
     viewState.transitioning = false;
@@ -398,35 +396,24 @@ function switchVideoCategory(categoryId) {
     populateVideoGrid(categoryId, false);
     const newCards = videoGrid.querySelectorAll('.video-card');
 
-    gsap.set(titleEl, { opacity: 0, y: 10 });
     gsap.set(newCards, { opacity: 0, y: 24, scale: 0.97 });
 
     gsap
       .timeline({
         defaults: { overwrite: true },
         onComplete: () => {
-          gsap.set([titleEl, newCards], { clearProps: 'opacity,y,scale' });
+          gsap.set(newCards, { clearProps: 'opacity,y,scale' });
           finishIn();
         },
       })
-      .to(titleEl, {
+      .to(newCards, {
         opacity: 1,
         y: 0,
-        duration: 0.35,
-        ease: 'power2.out',
-      })
-      .to(
-        newCards,
-        {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          duration: 0.55,
-          stagger: 0.04,
-          ease: 'expo.out',
-        },
-        '-=0.18'
-      );
+        scale: 1,
+        duration: 0.55,
+        stagger: 0.04,
+        ease: 'expo.out',
+      });
   };
 
   if (!oldCards.length) {
@@ -444,16 +431,6 @@ function switchVideoCategory(categoryId) {
         scale: 0.98,
         duration: 0.28,
         stagger: { each: 0.02, from: 'start' },
-        ease: 'power2.in',
-      },
-      0
-    )
-    .to(
-      titleEl,
-      {
-        opacity: 0,
-        y: -8,
-        duration: 0.22,
         ease: 'power2.in',
       },
       0
@@ -591,12 +568,10 @@ function animateFilterIntoCategory(filterBtn, card) {
 }
 
 function openVideoView(categoryId, focusCard) {
-  const cat = getCategory(categoryId);
   viewState.mode = 'videos';
   viewState.activeCategory = categoryId;
 
   populateVideoGrid(categoryId, false);
-  videoViewTitle.textContent = cat ? cat.label : '';
   videoView.hidden = false;
   updateFooterForVideos(categoryId);
 
@@ -729,12 +704,13 @@ function populateVideoGrid(categoryId, animate = false) {
   const videos = getVideosByCategory(categoryId);
   previewObserver().disconnect();
   videoGrid.innerHTML = '';
-  videoViewTitle.textContent = getCategory(categoryId)?.label || '';
 
   videos.forEach((video) => {
     const card = document.createElement('article');
     card.className = 'video-card';
     card.setAttribute('data-video-id', video.id);
+    card.style.setProperty('--card-aspect', video.aspect);
+    card.classList.toggle('is-landscape', video.aspect > 1);
     card.tabIndex = 0;
 
     const brandHtml = video.brand
