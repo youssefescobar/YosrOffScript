@@ -338,6 +338,39 @@ img, video { display: block; max-width: 100%; }
   grid-column: span 2;
 }
 
+/* Desktop / tablet: every film is shown whole on one screen. main.js
+   (fitVideoGrid) picks the rows and sizes each tile to its clip's shape. */
+@media (min-width: 769px) {
+  .video-grid {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tile-gap, 8px);
+    padding: calc(var(--header-h) + 8px) 24px calc(var(--footer-h) + 8px);
+    overflow: hidden;
+    scroll-snap-type: none;
+  }
+
+  .video-row {
+    display: flex;
+    justify-content: center;
+    gap: var(--tile-gap, 8px);
+  }
+
+  .video-card,
+  .video-card.is-landscape {
+    flex: none;
+    grid-column: auto;
+  }
+}
+
+/* Idle titles sit dead-centre in the tile, wrapped lines centred too */
+.video-card:not(.is-hover) .video-card__meta-inner {
+  align-items: center;
+  text-align: center;
+}
+
 .video-card.is-detail-source {
   visibility: hidden;
   pointer-events: none;

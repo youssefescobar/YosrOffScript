@@ -573,6 +573,7 @@ function openVideoView(categoryId, focusCard) {
 
   populateVideoGrid(categoryId, false);
   videoView.hidden = false;
+  fitVideoGrid(); // the grid has no size while the view is hidden
   updateFooterForVideos(categoryId);
 
   const cards = videoGrid.querySelectorAll('.video-card');
@@ -826,6 +827,9 @@ function populateVideoGrid(categoryId, animate = false) {
     setMetaPose(card, false, false);
   });
 
+  _fitSignature = '';
+  fitVideoGrid();
+
   if (animate) {
     const cards = videoGrid.querySelectorAll('.video-card');
     gsap.fromTo(
@@ -835,6 +839,107 @@ function populateVideoGrid(categoryId, animate = false) {
     );
   }
 }
+
+/* Desktop / tablet: choose rows + tile size so every film fits on screen at
+   once, whole (no crop), as large as possible. Phones keep the scrolling
+   2-column grid. */
+const TILE_GAP = 8;
+const MAX_TILE_H = 640;
+let _fitSignature = '';
+
+function fitVideoGrid() {
+  if (!videoGrid) return;
+  const cards = Array.from(videoGrid.querySelectorAll('.video-card'));
+  if (!cards.length) return;
+
+  if (window.matchMedia('(max-width: 768px)').matches) {
+    // Phone: flat scrolling grid, sizes come from CSS
+    if (_fitSignature !== 'flat') {
+      cards.forEach((c) => {
+        c.style.width = '';
+        videoGrid.appendChild(c);
+      });
+      videoGrid.querySelectorAll('.video-row').forEach((r) => r.remove());
+      _fitSignature = 'flat';
+    }
+    // Explicit heights: with aspect-ratio alone the grid rows collapse
+    // (overflow:hidden tiles) and each tile ends up overlapped by the next.
+    const colW = videoGrid.clientWidth / 2;
+    cards.forEach((c) => {
+      const a = Number(c.style.getPropertyValue('--card-aspect')) || 9 / 16;
+      const w = c.classList.contains('is-landscape') ? colW * 2 : colW;
+      c.style.height = colW ? `${Math.round(w / a)}px` : '';
+    });
+    return;
+  }
+
+  const cs = getComputedStyle(videoGrid);
+  const availW =
+    videoGrid.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const availH =
+    videoGrid.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  if (availW <= 0 || availH <= 0) return;
+
+  const aspects = cards.map((c) => Number(c.style.getPropertyValue('--card-aspect')) || 9 / 16);
+  const n = cards.length;
+
+  // Try every row count; keep the layout with the tallest tiles.
+  let best = null;
+  for (let rows = 1; rows <= n; rows++) {
+    const base = Math.floor(n / rows);
+    const extra = n % rows;
+    const sizes = Array.from({ length: rows }, (_, i) => base + (i < extra ? 1 : 0));
+    let idx = 0;
+    let widest = 0;
+    const groups = sizes.map((k) => {
+      const g = [];
+      let sum = 0;
+      for (let j = 0; j < k; j++) {
+        g.push(idx);
+        sum += aspects[idx++];
+      }
+      widest = Math.max(widest, sum);
+      return { g, sum, k };
+    });
+    const gapW = Math.max(...sizes) - 1;
+    // widest row: h*sum + gaps = availW
+    const hByW = widest ? (availW - gapW * TILE_GAP) / widest : Infinity;
+    const hByH = (availH - (rows - 1) * TILE_GAP) / rows;
+    const h = Math.min(hByW, hByH, MAX_TILE_H);
+    if (!best || h > best.h + 0.5) best = { h, groups };
+  }
+
+  const h = Math.max(80, Math.floor(best.h));
+  const signature = best.groups.map((g) => g.g.join('.')).join('|');
+
+  if (signature !== _fitSignature) {
+    const wasPlaying = cards.filter((c) => c.classList.contains('is-playing'));
+    videoGrid.querySelectorAll('.video-row').forEach((r) => r.remove());
+    best.groups.forEach(({ g }) => {
+      const row = document.createElement('div');
+      row.className = 'video-row';
+      g.forEach((i) => row.appendChild(cards[i]));
+      videoGrid.appendChild(row);
+    });
+    _fitSignature = signature;
+    // Re-parenting pauses media elements; resume the ones that were playing
+    wasPlaying.forEach((c) => {
+      const v = c.querySelector('.video-card__video');
+      if (v && v.getAttribute('src')) v.play().catch(() => {});
+    });
+  }
+
+  cards.forEach((c, i) => {
+    c.style.height = `${h}px`;
+    c.style.width = `${Math.floor(h * aspects[i])}px`;
+  });
+}
+
+let _fitRaf = 0;
+window.addEventListener('resize', () => {
+  cancelAnimationFrame(_fitRaf);
+  _fitRaf = requestAnimationFrame(fitVideoGrid);
+});
 
 function escapeHtml(s) {
   return String(s ?? '').replace(
