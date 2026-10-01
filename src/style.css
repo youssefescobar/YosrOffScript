@@ -336,33 +336,42 @@ img, video { display: block; max-width: 100%; }
   grid-column: span 2;
 }
 
-/* Desktop / tablet: the tiles tile the whole screen edge to edge, no gaps,
-   no scrolling. main.js (fitVideoGrid) picks the rows/columns for the number
-   of films; rows stretch so the last row is never left with holes. */
+/* Desktop / tablet: 4 tiles per row (3 on tablets), all the same 4:5 shape,
+   stitched edge to edge. An incomplete last row is centred. The grid scrolls
+   (wheel smoothing lives in main.js) and never shows a scrollbar. */
 @media (min-width: 769px) {
   .video-grid {
+    --cols: 4;
     display: flex;
-    flex-direction: column;
-    overflow: hidden;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-content: flex-start;
+    align-content: safe center; /* centre short pages, top-align long ones */
     scroll-snap-type: none;
   }
 
-  .video-row {
-    display: flex;
-    flex: 1 1 0;
-    min-height: 0;
-  }
-
-  .video-card,
-  .video-card.is-landscape {
-    flex: var(--tile-weight, 1) 1 0;
-    min-width: 0;
-    width: auto;
-    height: auto;
-    aspect-ratio: auto;
+  .video-card {
+    flex: 0 0 calc(100% / var(--cols));
+    width: calc(100% / var(--cols));
+    aspect-ratio: 4 / 5;
     grid-column: auto;
   }
+
+  /* A landscape clip takes two columns, same row height */
+  .video-card.is-landscape {
+    flex-basis: calc(200% / var(--cols));
+    width: calc(200% / var(--cols));
+    aspect-ratio: 8 / 5;
+  }
 }
+
+@media (min-width: 769px) and (max-width: 1100px) {
+  .video-grid { --cols: 3; }
+}
+
+/* No visible scrollbar anywhere on the film grid */
+.video-grid { scrollbar-width: none; }
+.video-grid::-webkit-scrollbar { display: none; }
 
 /* Idle titles sit dead-centre in the tile, wrapped lines centred too */
 .video-card:not(.is-hover) .video-card__meta-inner {

@@ -826,7 +826,6 @@ function populateVideoGrid(categoryId, animate = false) {
     setMetaPose(card, false, false);
   });
 
-  _fitSignature = '';
   fitVideoGrid();
 
   if (animate) {
@@ -839,100 +838,63 @@ function populateVideoGrid(categoryId, animate = false) {
   }
 }
 
-/* Desktop / tablet: tile the whole screen edge to edge, no gaps, no scroll.
-   Picks the column count whose tiles are closest to a pleasant shape
-   (portrait ~3:4, landscape clips ~16:10 and double width). Rows stretch, so
-   a short last row has no holes. Phones keep the scrolling 2-column grid. */
-const PORTRAIT_TARGET = 0.75;
-const LANDSCAPE_TARGET = 1.6;
-let _fitSignature = '';
-
-function packRows(weights, cols) {
-  const rows = [];
-  let row = [];
-  let sum = 0;
-  weights.forEach((w, i) => {
-    if (row.length && sum + w > cols) {
-      rows.push(row);
-      row = [];
-      sum = 0;
-    }
-    row.push(i);
-    sum += w;
-  });
-  if (row.length) rows.push(row);
-  return rows;
-}
-
+/* Tile sizing.
+   Desktop / tablet: pure CSS (4 per row, 3 on tablets, 4:5 tiles, last row
+   centred). Phones: explicit heights — with aspect-ratio alone the 2-column
+   grid rows collapse (overflow:hidden tiles) and each tile ends up overlapped
+   by the next. */
 function fitVideoGrid() {
   if (!videoGrid) return;
   const cards = Array.from(videoGrid.querySelectorAll('.video-card'));
-  if (!cards.length) return;
-  const weights = cards.map((c) => (c.classList.contains('is-landscape') ? 2 : 1));
-
-  if (window.matchMedia('(max-width: 768px)').matches) {
-    if (_fitSignature !== 'flat') {
-      cards.forEach((c) => {
-        c.style.removeProperty('--tile-weight');
-        videoGrid.appendChild(c);
-      });
-      videoGrid.querySelectorAll('.video-row').forEach((r) => r.remove());
-      _fitSignature = 'flat';
+  const phone = window.matchMedia('(max-width: 768px)').matches;
+  const colW = videoGrid.clientWidth / 2;
+  cards.forEach((c) => {
+    if (!phone || !colW) {
+      c.style.height = '';
+      return;
     }
-    // Explicit heights: with aspect-ratio alone the grid rows collapse
-    // (overflow:hidden tiles) and each tile ends up overlapped by the next.
-    const colW = videoGrid.clientWidth / 2;
-    cards.forEach((c, i) => {
-      c.style.height = colW ? `${Math.round(weights[i] === 2 ? colW * 2 * (9 / 16) : colW * 1.25)}px` : '';
-    });
-    return;
-  }
-
-  const W = videoGrid.clientWidth;
-  const H = videoGrid.clientHeight;
-  if (W <= 0 || H <= 0) return;
-
-  const totalSlots = weights.reduce((a, b) => a + b, 0);
-  let best = null;
-  for (let cols = 1; cols <= totalSlots; cols++) {
-    const rows = packRows(weights, cols);
-    const tileH = H / rows.length;
-    let score = 0;
-    const rowSums = rows.map((r) => r.reduce((a, i) => a + weights[i], 0));
-    rows.forEach((r, ri) => {
-      r.forEach((i) => {
-        const tileW = (W * weights[i]) / rowSums[ri];
-        const target = weights[i] === 2 ? LANDSCAPE_TARGET : PORTRAIT_TARGET;
-        score += Math.abs(Math.log(tileW / tileH / target));
-      });
-    });
-    score /= cards.length;
-    if (new Set(rowSums).size > 1) score += 0.12; // uneven rows look less tidy
-    if (!best || score < best.score - 1e-6) best = { score, rows };
-  }
-
-  const signature = best.rows.map((r) => r.join('.')).join('|');
-  if (signature !== _fitSignature) {
-    const wasPlaying = cards.filter((c) => c.classList.contains('is-playing'));
-    videoGrid.querySelectorAll('.video-row').forEach((r) => r.remove());
-    best.rows.forEach((r) => {
-      const row = document.createElement('div');
-      row.className = 'video-row';
-      r.forEach((i) => row.appendChild(cards[i]));
-      videoGrid.appendChild(row);
-    });
-    _fitSignature = signature;
-    // Re-parenting pauses media elements; resume the ones that were playing
-    wasPlaying.forEach((c) => {
-      const v = c.querySelector('.video-card__video');
-      if (v && v.getAttribute('src')) v.play().catch(() => {});
-    });
-  }
-
-  cards.forEach((c, i) => {
-    c.style.height = '';
-    c.style.setProperty('--tile-weight', weights[i]);
+    const landscape = c.classList.contains('is-landscape');
+    c.style.height = `${Math.round(landscape ? colW * 2 * (5 / 8) : colW * 1.25)}px`;
   });
+}
+
+/* Mouse-wheel smoothing for the desktop film grid. The scrollbar is hidden,
+   so ease the wheel into a glide instead of native jumpy steps. Touch and
+   trackpad inertia keep their native behaviour on phones. */
+function initSmoothScroll() {
+  if (!videoGrid) return;
+  let target = 0;
+  let raf = 0;
+
+  const step = () => {
+    const max = videoGrid.scrollHeight - videoGrid.clientHeight;
+    target = Math.max(0, Math.min(target, max));
+    const cur = videoGrid.scrollTop;
+    const d = target - cur;
+    if (Math.abs(d) < 0.5) {
+      videoGrid.scrollTop = target;
+      raf = 0;
+      return;
+    }
+    const move = Math.sign(d) * Math.max(1, Math.abs(d) * 0.14);
+    videoGrid.scrollTop = Math.abs(move) > Math.abs(d) ? target : cur + move;
+    raf = requestAnimationFrame(step);
+  };
+
+  videoGrid.addEventListener(
+    'wheel',
+    (e) => {
+      if (e.ctrlKey || window.matchMedia('(max-width: 768px)').matches) return;
+      const max = videoGrid.scrollHeight - videoGrid.clientHeight;
+      if (max <= 0) return;
+      e.preventDefault();
+      if (!raf) target = videoGrid.scrollTop;
+      const dy = e.deltaMode === 1 ? e.deltaY * 32 : e.deltaY;
+      target = Math.max(0, Math.min(target + dy, max));
+      if (!raf) raf = requestAnimationFrame(step);
+    },
+    { passive: false }
+  );
 }
 
 let _fitRaf = 0;
@@ -2241,6 +2203,7 @@ function init() {
 
   buildCategoryView();
   initFilters();
+  initSmoothScroll();
   initKeyboard();
   initRouting();
   bindTouchCardDismiss();
