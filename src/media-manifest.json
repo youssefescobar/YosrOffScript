@@ -1,0 +1,344 @@
+{
+  "bts-atm-production-heddy-rassekh": {
+    "slug": "bts-atm-production-heddy-rassekh",
+    "category": "bts",
+    "width": 1080,
+    "height": 1920,
+    "duration": 18.1,
+    "aspect": 0.563,
+    "source": {
+      "size": 25574937,
+      "mtimeMs": 1790560958000
+    },
+    "posterAt": null,
+    "files": {
+      "video": "bts-atm-production-heddy-rassekh.defdc97a.mp4",
+      "preview": "bts-atm-production-heddy-rassekh-preview.351384e8.mp4",
+      "poster": "bts-atm-production-heddy-rassekh.e8d34f5c.webp"
+    }
+  },
+  "bts-atm-production-in-your-shoe": {
+    "slug": "bts-atm-production-in-your-shoe",
+    "category": "bts",
+    "width": 1080,
+    "height": 1920,
+    "duration": 36,
+    "aspect": 0.563,
+    "source": {
+      "size": 45048070,
+      "mtimeMs": 1790560980000
+    },
+    "posterAt": null,
+    "files": {
+      "video": "bts-atm-production-in-your-shoe.af85eeaa.mp4",
+      "preview": "bts-atm-production-in-your-shoe-preview.4ef220d5.mp4",
+      "poster": "bts-atm-production-in-your-shoe.08e7e525.webp"
+    }
+  },
+  "bts-atm-production-roaia": {
+    "slug": "bts-atm-production-roaia",
+    "category": "bts",
+    "width": 1080,
+    "height": 1920,
+    "duration": 26.2,
+    "aspect": 0.563,
+    "source": {
+      "size": 37092248,
+      "mtimeMs": 1790561080000
+    },
+    "posterAt": null,
+    "files": {
+      "video": "bts-atm-production-roaia.cef5bfec.mp4",
+      "preview": "bts-atm-production-roaia-preview.f7ef81dc.mp4",
+      "poster": "bts-atm-production-roaia.c9e0edf1.webp"
+    }
+  },
+  "bts-bossa-nova": {
+    "slug": "bts-bossa-nova",
+    "category": "bts",
+    "width": 1080,
+    "height": 1920,
+    "duration": 21,
+    "aspect": 0.563,
+    "source": {
+      "size": 33201788,
+      "mtimeMs": 1790560112000
+    },
+    "posterAt": null,
+    "files": {
+      "video": "bts-bossa-nova.3bd85342.mp4",
+      "preview": "bts-bossa-nova-preview.b7c266d0.mp4",
+      "poster": "bts-bossa-nova.f7512c0f.webp"
+    }
+  },
+  "bts-jjs-designs": {
+    "slug": "bts-jjs-designs",
+    "category": "bts",
+    "width": 1080,
+    "height": 1920,
+    "duration": 15.6,
+    "aspect": 0.563,
+    "source": {
+      "size": 21838625,
+      "mtimeMs": 1790561176000
+    },
+    "posterAt": null,
+    "files": {
+      "video": "bts-jjs-designs.cc7db201.mp4",
+      "preview": "bts-jjs-designs-preview.9abf64dc.mp4",
+      "poster": "bts-jjs-designs.7cd4c799.webp"
+    }
+  },
+  "bts-lail-fashion": {
+    "slug": "bts-lail-fashion",
+    "category": "bts",
+    "width": 1080,
+    "height": 1920,
+    "duration": 30.6,
+    "aspect": 0.563,
+    "source": {
+      "size": 43622560,
+      "mtimeMs": 1790561048000
+    },
+    "posterAt": null,
+    "files": {
+      "video": "bts-lail-fashion.6be70189.mp4",
+      "preview": "bts-lail-fashion-preview.053d3bed.mp4",
+      "poster": "bts-lail-fashion.992acfcb.webp"
+    }
+  },
+  "events-edu-gate-must": {
+    "slug": "events-edu-gate-must",
+    "category": "events",
+    "width": 1080,
+    "height": 1920,
+    "duration": 21.5,
+    "aspect": 0.563,
+    "source": {
+      "size": 30915683,
+      "mtimeMs": 1790561518000
+    },
+    "posterAt": null,
+    "files": {
+      "video": "events-edu-gate-must.0b1953d1.mp4",
+      "preview": "events-edu-gate-must-preview.28c8711a.mp4",
+      "poster": "events-edu-gate-must.7d002271.webp"
+    }
+  },
+  "events-knowledge-valley-schools": {
+    "slug": "events-knowledge-valley-schools",
+    "category": "events",
+    "width": 1080,
+    "height": 1920,
+    "duration": 34.2,
+    "aspect": 0.563,
+    "source": {
+      "size": 54472851,
+      "mtimeMs": 1790562020000
+    },
+    "posterAt": null,
+    "files": {
+      "video": "events-knowledge-valley-schools.239e63a1.mp4",
+      "preview": "events-knowledge-valley-schools-preview.211481a0.mp4",
+      "poster": "events-knowledge-valley-schools.02f488b4.webp"
+    }
+  },
+  "events-outing-worood": {
+    "slug": "events-outing-worood",
+    "category": "events",
+    "width": 1080,
+    "height": 1920,
+    "duration": 45.7,
+    "aspect": 0.563,
+    "source": {
+      "size": 72722742,
+      "mtimeMs": 1790561680000
+    },
+    "posterAt": null,
+    "files": {
+      "video": "events-outing-worood.8c5fe27c.mp4",
+      "preview": "events-outing-worood-preview.8ed88102.mp4",
+      "poster": "events-outing-worood.71d322d8.webp"
+    }
+  },
+  "events-salata": {
+    "slug": "events-salata",
+    "category": "events",
+    "width": 1080,
+    "height": 1920,
+    "duration": 29.2,
+    "aspect": 0.563,
+    "source": {
+      "size": 43747047,
+      "mtimeMs": 1790561462000
+    },
+    "posterAt": null,
+    "files": {
+      "video": "events-salata.9c76128a.mp4",
+      "preview": "events-salata-preview.0d214399.mp4",
+      "poster": "events-salata.3b0a51a1.webp"
+    }
+  },
+  "fashion-casa-lila": {
+    "slug": "fashion-casa-lila",
+    "category": "fashion",
+    "width": 1080,
+    "height": 1920,
+    "duration": 10,
+    "aspect": 0.563,
+    "source": {
+      "size": 15714337,
+      "mtimeMs": 1790561362000
+    },
+    "posterAt": null,
+    "files": {
+      "video": "fashion-casa-lila.f8feed42.mp4",
+      "preview": "fashion-casa-lila-preview.451cf20e.mp4",
+      "poster": "fashion-casa-lila.fa0a627a.webp"
+    }
+  },
+  "fashion-l": {
+    "slug": "fashion-l",
+    "category": "fashion",
+    "width": 1080,
+    "height": 1920,
+    "duration": 15.9,
+    "aspect": 0.563,
+    "source": {
+      "size": 22264791,
+      "mtimeMs": 1790574650000
+    },
+    "posterAt": null,
+    "files": {
+      "video": "fashion-l.c497c20f.mp4",
+      "preview": "fashion-l-preview.c20f8484.mp4",
+      "poster": "fashion-l.e7a2862d.webp"
+    }
+  },
+  "fashion-ll": {
+    "slug": "fashion-ll",
+    "category": "fashion",
+    "width": 1080,
+    "height": 1920,
+    "duration": 9.5,
+    "aspect": 0.563,
+    "source": {
+      "size": 13499332,
+      "mtimeMs": 1790574662000
+    },
+    "posterAt": null,
+    "files": {
+      "video": "fashion-ll.58887391.mp4",
+      "preview": "fashion-ll-preview.cdc88099.mp4",
+      "poster": "fashion-ll.4431091b.webp"
+    }
+  },
+  "fashion-sakina": {
+    "slug": "fashion-sakina",
+    "category": "fashion",
+    "width": 1080,
+    "height": 1920,
+    "duration": 21.5,
+    "aspect": 0.563,
+    "source": {
+      "size": 26369007,
+      "mtimeMs": 1790561314000
+    },
+    "posterAt": null,
+    "files": {
+      "video": "fashion-sakina.1d3b6ed6.mp4",
+      "preview": "fashion-sakina-preview.4b5c69b5.mp4",
+      "poster": "fashion-sakina.56e2b4ce.webp"
+    }
+  },
+  "fashion-shakti-the-brand-l": {
+    "slug": "fashion-shakti-the-brand-l",
+    "category": "fashion",
+    "width": 1080,
+    "height": 1920,
+    "duration": 15.8,
+    "aspect": 0.563,
+    "source": {
+      "size": 23084318,
+      "mtimeMs": 1790561262000
+    },
+    "posterAt": null,
+    "files": {
+      "video": "fashion-shakti-the-brand-l.116a1df9.mp4",
+      "preview": "fashion-shakti-the-brand-l-preview.6136f7de.mp4",
+      "poster": "fashion-shakti-the-brand-l.9fd4acd7.webp"
+    }
+  },
+  "fashion-shakti-the-brand-ll": {
+    "slug": "fashion-shakti-the-brand-ll",
+    "category": "fashion",
+    "width": 1080,
+    "height": 1920,
+    "duration": 22.1,
+    "aspect": 0.563,
+    "source": {
+      "size": 29918369,
+      "mtimeMs": 1790561282000
+    },
+    "posterAt": null,
+    "files": {
+      "video": "fashion-shakti-the-brand-ll.209b9e4c.mp4",
+      "preview": "fashion-shakti-the-brand-ll-preview.40169e4b.mp4",
+      "poster": "fashion-shakti-the-brand-ll.214ba39c.webp"
+    }
+  },
+  "fashion-shakti-the-brand-lll": {
+    "slug": "fashion-shakti-the-brand-lll",
+    "category": "fashion",
+    "width": 1080,
+    "height": 1920,
+    "duration": 12.7,
+    "aspect": 0.563,
+    "source": {
+      "size": 18035181,
+      "mtimeMs": 1790561302000
+    },
+    "posterAt": null,
+    "files": {
+      "video": "fashion-shakti-the-brand-lll.8cf0cc01.mp4",
+      "preview": "fashion-shakti-the-brand-lll-preview.454c0545.mp4",
+      "poster": "fashion-shakti-the-brand-lll.b7fb0f76.webp"
+    }
+  },
+  "fashion-worood": {
+    "slug": "fashion-worood",
+    "category": "fashion",
+    "width": 1080,
+    "height": 1920,
+    "duration": 18.5,
+    "aspect": 0.563,
+    "source": {
+      "size": 29429525,
+      "mtimeMs": 1790561330000
+    },
+    "posterAt": null,
+    "files": {
+      "video": "fashion-worood.51f800c4.mp4",
+      "preview": "fashion-worood-preview.18b5bbfb.mp4",
+      "poster": "fashion-worood.89697768.webp"
+    }
+  },
+  "film-the-hungary-experience": {
+    "slug": "film-the-hungary-experience",
+    "category": "film",
+    "width": 1920,
+    "height": 1080,
+    "duration": 56.3,
+    "aspect": 1.778,
+    "source": {
+      "size": 141922978,
+      "mtimeMs": 1790562134000
+    },
+    "posterAt": null,
+    "files": {
+      "video": "film-the-hungary-experience.327c075b.mp4",
+      "preview": "film-the-hungary-experience-preview.69e87275.mp4",
+      "poster": "film-the-hungary-experience.c01516de.webp"
+    }
+  }
+}

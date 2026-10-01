@@ -184,7 +184,8 @@ img, video { display: block; max-width: 100%; }
   position: absolute;
   inset: 0;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  /* --cat-count is set from CATEGORIES in main.js (empty categories are hidden) */
+  grid-template-columns: repeat(var(--cat-count, 5), 1fr);
   gap: 12px;
   padding: calc(var(--header-h) + 16px) 28px calc(var(--footer-h) + 16px);
   align-content: center;
@@ -441,6 +442,14 @@ img, video { display: block; max-width: 100%; }
   width: max-content;
   max-width: min(86%, 280px);
   will-change: transform;
+}
+
+/* Desktop idle pose scales the title ~1.7x (GSAP): cap the unscaled width so
+   long titles wrap inside the tile instead of being clipped by its edges. */
+@media (min-width: 769px) {
+  .video-card:not(.is-hover) .video-card__meta-inner {
+    max-width: min(48%, 280px);
+  }
 }
 
 .video-card__brand {
@@ -1096,6 +1105,21 @@ img, video { display: block; max-width: 100%; }
   max-height: none;
 }
 
+/* Landscape (16:9) films: wider player, never cropped */
+.project-panel__inner.is-landscape {
+  max-width: 1100px;
+  grid-template-columns: minmax(0, 1.7fr) minmax(220px, 1fr);
+}
+
+.is-landscape .project-panel__player-slot {
+  max-width: none;
+}
+
+.is-landscape .project-panel__video {
+  max-height: min(60vh, 560px);
+  object-fit: contain;
+}
+
 .project-panel__meta {
   position: relative;
   z-index: 1;
@@ -1166,7 +1190,7 @@ img, video { display: block; max-width: 100%; }
    =================================================== */
 @media (max-width: 1100px) {
   .category-view {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(var(--cat-cols-mid, 3), 1fr);
     gap: 12px;
     padding: calc(var(--header-h) + 20px) 18px calc(var(--footer-h) + 20px);
   }
@@ -1553,5 +1577,18 @@ img, video { display: block; max-width: 100%; }
   .project-panel__fullscreen {
     padding: 8px 12px;
     font-size: 0.55rem;
+  }
+}
+
+/* Landscape films on phones: stack the player above the text (side-by-side
+   would shrink a 16:9 player to ~120px). Vertical films keep side-by-side. */
+@media (max-width: 768px) {
+  .project-panel__inner.is-landscape {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-md);
+  }
+
+  .is-landscape .project-panel__player-slot {
+    max-width: 100%;
   }
 }

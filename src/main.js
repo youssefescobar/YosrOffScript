@@ -200,6 +200,10 @@ function buildCategoryView() {
   categoryView.innerHTML = '';
   categoryCards = [];
 
+  // Grid columns follow the real category count (empty categories are hidden)
+  categoryView.style.setProperty('--cat-count', CATEGORIES.length);
+  categoryView.style.setProperty('--cat-cols-mid', CATEGORIES.length % 2 === 0 ? 2 : 3);
+
   CATEGORIES.forEach((cat) => {
     const count = getVideosByCategory(cat.id).length;
     const el = document.createElement('button');
@@ -210,7 +214,7 @@ function buildCategoryView() {
       <img class="category-card__img" src="${cat.cover}" alt="${cat.label}" draggable="false" />
       <div class="category-card__overlay">
         <span class="category-card__label">${cat.label}</span>
-        <span class="category-card__count">${count} films</span>
+        <span class="category-card__count">${count} ${count === 1 ? 'film' : 'films'}</span>
       </div>
     `;
     el.addEventListener('click', () => {
@@ -237,7 +241,7 @@ function updateFooterForCategories() {
 function updateFooterForVideos(categoryId) {
   const cat = getCategory(categoryId);
   const videos = getVideosByCategory(categoryId);
-  tileCountEl.textContent = `${videos.length} Films`;
+  tileCountEl.textContent = `${videos.length} ${videos.length === 1 ? 'Film' : 'Films'}`;
   footerHint.textContent = cat ? cat.label : '';
   filterBack.hidden = false;
   document.querySelectorAll('.filter-btn[data-filter]').forEach((btn) => {
@@ -723,6 +727,7 @@ function exitToCategories() {
    =================================================== */
 function populateVideoGrid(categoryId, animate = false) {
   const videos = getVideosByCategory(categoryId);
+  previewObserver().disconnect();
   videoGrid.innerHTML = '';
   videoViewTitle.textContent = getCategory(categoryId)?.label || '';
 
@@ -733,39 +738,34 @@ function populateVideoGrid(categoryId, animate = false) {
     card.tabIndex = 0;
 
     const brandHtml = video.brand
-      ? `<span class="video-card__brand">${video.brand}</span>`
+      ? `<span class="video-card__brand">${escapeHtml(video.brand)}</span>`
       : '';
 
     card.innerHTML = `
       <div class="video-card__media">
-        <img class="video-card__poster" src="${video.poster}" alt="" draggable="false" />
+        <img class="video-card__poster" src="${escapeAttr(video.poster)}" alt="" draggable="false" />
         <video
           class="video-card__video"
-          src="${video.src}"
+          data-src="${escapeAttr(video.preview)}"
           muted
           loop
           playsinline
-          preload="auto"
-          poster="${video.poster}"
+          preload="none"
+          poster="${escapeAttr(video.poster)}"
         ></video>
       </div>
       <div class="video-card__meta">
         <div class="video-card__meta-inner">
           ${brandHtml}
-          <h3 class="video-card__title">${video.title}</h3>
+          <h3 class="video-card__title">${escapeHtml(video.title)}</h3>
         </div>
       </div>
     `;
 
     const videoEl = card.querySelector('.video-card__video');
 
-    // Idle ambient sample — always looping softly under the title
-    const tryIdlePlay = () => startIdleLoop(card, videoEl);
-    if (videoEl.readyState >= 2) {
-      tryIdlePlay();
-    } else {
-      videoEl.addEventListener('loadeddata', tryIdlePlay, { once: true });
-    }
+    // Idle ambient sample — loads and plays only while the card is on screen
+    previewObserver().observe(card);
 
     card.addEventListener('mouseenter', () => {
       if (!isTouchUi()) setCardHover(card, true);
@@ -858,6 +858,45 @@ function populateVideoGrid(categoryId, animate = false) {
       { opacity: 1, y: 0, scale: 1, duration: 0.55, stagger: 0.05, ease: 'expo.out' }
     );
   }
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]
+  );
+}
+const escapeAttr = escapeHtml;
+
+/* One shared observer: a card's preview clip downloads and plays only while
+   it is on screen, and pauses when it scrolls away. */
+let _previewObserver = null;
+function previewObserver() {
+  if (_previewObserver) return _previewObserver;
+  _previewObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        const card = entry.target;
+        const videoEl = card.querySelector('.video-card__video');
+        if (!videoEl) return;
+        if (entry.isIntersecting) {
+          if (viewState.mode === 'detail') return;
+          // Reduced motion: keep the still poster, never load/play the loop
+          if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+          if (!videoEl.getAttribute('src')) {
+            videoEl.setAttribute('src', videoEl.dataset.src);
+            videoEl.preload = 'auto';
+          }
+          startIdleLoop(card, videoEl);
+        } else {
+          videoEl.pause();
+          card.classList.remove('is-playing');
+        }
+      });
+    },
+    { threshold: 0.25 }
+  );
+  return _previewObserver;
 }
 
 function startIdleLoop(card, videoEl) {
@@ -1025,10 +1064,12 @@ function openVideoDetail(video, { fromRoute = false } = {}) {
   }
 
   const brandHtml = video.brand
-    ? `<span class="project-panel__brand project-panel__meta-item">${video.brand}</span>`
+    ? `<span class="project-panel__brand project-panel__meta-item">${escapeHtml(video.brand)}</span>`
     : '';
 
   const cat = getCategory(video.category);
+  const isLandscape = video.aspect > 1;
+  projectInner.classList.toggle('is-landscape', isLandscape);
 
   projectInner.innerHTML = `
     <div class="project-panel__player-slot" id="detail-player-slot">
@@ -1036,19 +1077,21 @@ function openVideoDetail(video, { fromRoute = false } = {}) {
         <video
           class="project-panel__video"
           id="detail-video"
-          src="${video.src}"
-          poster="${video.poster}"
+          src="${escapeAttr(video.src)}"
+          poster="${escapeAttr(video.poster)}"
+          style="aspect-ratio: ${video.aspect}"
           controls
           playsinline
           autoplay
+          preload="metadata"
         ></video>
       </div>
     </div>
     <div class="project-panel__meta" id="detail-meta">
       ${brandHtml}
-      <h2 class="project-panel__title project-panel__meta-item">${video.title}</h2>
-      <div class="project-panel__category project-panel__meta-item">${cat ? cat.label : video.category}</div>
-      <p class="project-panel__desc project-panel__meta-item">${video.description || ''}</p>
+      <h2 class="project-panel__title project-panel__meta-item">${escapeHtml(video.title)}</h2>
+      <div class="project-panel__category project-panel__meta-item">${escapeHtml(cat ? cat.label : video.category)}</div>
+      ${video.description ? `<p class="project-panel__desc project-panel__meta-item">${escapeHtml(video.description)}</p>` : ''}
       <button class="project-panel__fullscreen project-panel__meta-item" id="detail-fullscreen" type="button">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
         <span>View fullscreen</span>
@@ -1383,6 +1426,11 @@ function closeVideoDetail({ animate = true, fromRoute = false } = {}) {
    5. FILTERS + BACK
    =================================================== */
 function initFilters() {
+  // Hide filters for categories that have no videos
+  document.querySelectorAll('.filter-btn[data-filter]').forEach((btn) => {
+    if (!getCategory(btn.dataset.filter)) btn.remove();
+  });
+
   document.querySelectorAll('.filter-btn[data-filter]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const filter = btn.dataset.filter;
@@ -1454,31 +1502,6 @@ function loadImageAsset(src) {
   });
 }
 
-function loadVideoAsset(src) {
-  return new Promise((resolve) => {
-    const video = document.createElement('video');
-    video.muted = true;
-    video.playsInline = true;
-    video.preload = 'auto';
-    let settled = false;
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      video.removeAttribute('src');
-      try {
-        video.load();
-      } catch (_) {}
-      resolve(src);
-    };
-    video.addEventListener('loadeddata', finish, { once: true });
-    video.addEventListener('error', finish, { once: true });
-    // Don't let one slow CDN stall forever
-    setTimeout(finish, 14000);
-    video.src = src;
-    video.load();
-  });
-}
-
 function preloadAssets() {
   const aboutPhotoSrcs = Array.from(
     document.querySelectorAll('.about-panel__photo')
@@ -1493,8 +1516,6 @@ function preloadAssets() {
     '/preview.png',
     '/favicon.svg',
   ]);
-
-  const videoSrcs = unique(VIDEOS.map((v) => v.src));
 
   const progressEl = document.getElementById('loader-progress');
   const ctaEl = document.getElementById('loader-cta');
@@ -1511,15 +1532,14 @@ function preloadAssets() {
     .to('.loader__tagline-line', { y: '0%', duration: 0.8 }, '-=0.5')
     .to(progressEl, { opacity: 1, duration: 0.5 }, '-=0.3');
 
-  // Weighted progress: images dominate, then film warm-up, then fonts
+  // Weighted progress: images + fonts only. Videos load lazily (cards on
+  // view, detail on open) so the loader never waits on film bandwidth.
   const weights = {
-    images: 0.55,
-    videos: 0.35,
+    images: 0.9,
     fonts: 0.1,
   };
   const state = {
     images: 0,
-    videos: 0,
     fonts: 0,
   };
 
@@ -1531,10 +1551,7 @@ function preloadAssets() {
   function computeTarget() {
     return Math.min(
       100,
-      (state.images * weights.images +
-        state.videos * weights.videos +
-        state.fonts * weights.fonts) *
-        100
+      (state.images * weights.images + state.fonts * weights.fonts) * 100
     );
   }
 
@@ -1611,12 +1628,6 @@ function preloadAssets() {
       syncProgress();
     });
 
-    const videoJobs = videoSrcs.map(async (src) => {
-      await loadVideoAsset(src);
-      state.videos += 1 / Math.max(videoSrcs.length, 1);
-      syncProgress();
-    });
-
     const fontJob = document.fonts.ready
       .then(() => {
         state.fonts = 1;
@@ -1627,11 +1638,10 @@ function preloadAssets() {
         syncProgress();
       });
 
-    await Promise.allSettled([...imageJobs, ...videoJobs, fontJob]);
+    await Promise.allSettled([...imageJobs, fontJob]);
 
     // Safety: force remaining bars full if a counter drifted
     state.images = 1;
-    state.videos = 1;
     state.fonts = 1;
     syncProgress();
     finishWhenReady();
