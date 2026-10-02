@@ -1130,6 +1130,19 @@ img, video { display: block; max-width: 100%; }
   max-height: none;
 }
 
+/* Fullscreen: show the whole frame (portrait gets side bars, no crop) */
+.project-panel__video:fullscreen {
+  object-fit: contain;
+  aspect-ratio: auto;
+  max-height: none;
+}
+
+.project-panel__video:-webkit-full-screen {
+  object-fit: contain;
+  aspect-ratio: auto;
+  max-height: none;
+}
+
 /* Landscape (16:9) films: wider player, never cropped */
 .project-panel__inner.is-landscape {
   max-width: min(1280px, 94vw);
