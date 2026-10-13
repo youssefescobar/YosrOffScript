@@ -300,7 +300,16 @@ function updateFooterForVideos(categoryId) {
     const isActive = btn.dataset.filter === categoryId;
     btn.classList.toggle('active', isActive);
     btn.hidden = false;
+    if (isActive) revealFilter(btn);
   });
+}
+
+/* Phones: the filter row scrolls sideways, so keep the active pill in view */
+function revealFilter(btn) {
+  const row = btn.parentElement;
+  if (!row || row.scrollWidth <= row.clientWidth) return;
+  const left = btn.offsetLeft - (row.clientWidth - btn.offsetWidth) / 2;
+  row.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
 }
 
 /* ===================================================

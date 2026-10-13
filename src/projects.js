@@ -27,8 +27,8 @@ function media(slug) {
 }
 
 const ALL_CATEGORIES = [
-  { id: 'fashion', label: 'Fashion', coverFrom: 'fashion-sakina' },
-  { id: 'bts', label: 'BTS', coverFrom: 'bts-lail-fashion' },
+  { id: 'fashion', label: 'Fashion & Apparel', coverFrom: 'fashion-sakina' },
+  { id: 'bts', label: 'Behind The Scenes', coverFrom: 'bts-lail-fashion' },
   { id: 'events', label: 'Events', coverFrom: 'events-salata' },
   { id: 'fnb', label: 'F&B', coverFrom: null },
   { id: 'film', label: 'Film', coverFrom: 'film-the-hungary-experience' },
