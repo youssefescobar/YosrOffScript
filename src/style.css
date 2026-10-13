@@ -993,17 +993,6 @@ img, video { display: block; max-width: 100%; }
   background-color: #f09433;
 }
 
-/* LinkedIn */
-.about-panel__social[data-brand="linkedin"]:hover {
-  background-color: #0077b5;
-  border: 2px solid #bbecff;
-  box-shadow: 0 4px 15px rgba(0, 119, 181, 0.45);
-}
-.about-panel__social[data-brand="linkedin"] .about-panel__tooltip,
-.about-panel__social[data-brand="linkedin"] .about-panel__tooltip::before {
-  background-color: #0077b5;
-}
-
 /* Social hover card hue */
 .about-card[data-active-brand="instagram"],
 .about-card:has(.about-panel__social[data-brand="instagram"]:hover),
@@ -1018,21 +1007,6 @@ img, video { display: block; max-width: 100%; }
 .about-card:has(.about-panel__social[data-brand="instagram"]:hover) .about-card__flip-dot {
   background: #E1306C;
   box-shadow: 0 0 10px #E1306C;
-}
-
-.about-card[data-active-brand="linkedin"],
-.about-card:has(.about-panel__social[data-brand="linkedin"]:hover),
-.about-panel__inner:has(.about-panel__social[data-brand="linkedin"]:hover) .about-card {
-  --card-aura-opacity: 1;
-  --card-aura-bg: radial-gradient(circle at 50% 65%, rgba(0, 140, 240, 0.65) 0%, rgba(0, 119, 181, 0.3) 50%, transparent 75%);
-  --card-hue-glow: 0 0 50px rgba(0, 150, 240, 0.45), 0 0 20px rgba(0, 119, 181, 0.3);
-  --card-hue-border: rgba(0, 172, 238, 0.65);
-}
-
-.about-card[data-active-brand="linkedin"] .about-card__flip-dot,
-.about-card:has(.about-panel__social[data-brand="linkedin"]:hover) .about-card__flip-dot {
-  background: #00acee;
-  box-shadow: 0 0 10px #00acee;
 }
 
 .about-reveal {

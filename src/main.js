@@ -44,6 +44,7 @@ const routing = {
   ready: false,
   applying: false,
   bootHash: '#portfolio',
+  pending: false,
   intent: { fromFilter: false, filterBtn: null, sourceCard: null },
 };
 
@@ -55,6 +56,15 @@ let openAboutFn = () => {};
 let closeAboutFn = () => {};
 
 /* ---------- Hash routing ---------- */
+/** Leave About the way it was entered (back), or land on the portfolio. */
+function closeAboutRoute() {
+  if (history.state && history.state.from && history.state.from !== '#about') {
+    history.back();
+  } else {
+    setHash('#portfolio', { replace: true });
+  }
+}
+
 function normalizeHash(hash) {
   const h = (hash || '').trim();
   if (!h || h === '#') return '#portfolio';
@@ -102,6 +112,8 @@ function updateNav(route) {
   });
 }
 
+// Each history entry remembers the hash it was pushed from, so the in-page
+// Back button can step back through real history (same as the browser's).
 function setHash(hash, { replace = false } = {}) {
   const target = normalizeHash(hash);
   if (getHash() === target) {
@@ -109,15 +121,52 @@ function setHash(hash, { replace = false } = {}) {
     return;
   }
   if (replace) {
-    history.replaceState(null, '', target);
+    history.replaceState(history.state, '', target);
   } else {
-    history.pushState(null, '', target);
+    history.pushState({ from: getHash() }, '', target);
   }
   applyRoute();
 }
 
+/** Go up to `parent`: a real history step when we came from there, else replace. */
+function goBackTo(parent) {
+  const target = normalizeHash(parent);
+  if (getHash() === target) return;
+  if (history.state && history.state.from === target) {
+    history.back();
+  } else {
+    setHash(target, { replace: true });
+  }
+}
+
+/** Does the on-screen view already match the route? */
+function viewMatchesRoute(route) {
+  if (route.screen === 'about') return true;
+  if (route.screen === 'categories') return viewState.mode === 'categories';
+  if (route.screen === 'videos') {
+    return viewState.mode === 'videos' && viewState.activeCategory === route.category;
+  }
+  return viewState.mode === 'detail' && viewState.activeVideoId === route.videoId;
+}
+
+/**
+ * Route changes that land mid-animation are ignored by the transitions, so
+ * once an animation ends, catch the view up with whatever the URL says now.
+ */
+function endTransition() {
+  viewState.transitioning = false;
+  requestAnimationFrame(() => {
+    if (!routing.ready || routing.applying || viewState.transitioning) return;
+    if (!viewMatchesRoute(parseRoute())) applyRoute();
+  });
+}
+
 function applyRoute() {
-  if (!routing.ready || routing.applying) return;
+  if (!routing.ready) return;
+  if (routing.applying) {
+    routing.pending = true;
+    return;
+  }
   routing.applying = true;
 
   const route = parseRoute();
@@ -164,6 +213,10 @@ function applyRoute() {
   } finally {
     requestAnimationFrame(() => {
       routing.applying = false;
+      if (routing.pending) {
+        routing.pending = false;
+        applyRoute();
+      }
     });
   }
 }
@@ -389,7 +442,7 @@ function switchVideoCategory(categoryId) {
   const oldCards = Array.from(videoGrid.querySelectorAll('.video-card'));
 
   const finishIn = () => {
-    viewState.transitioning = false;
+    endTransition();
   };
 
   const revealNew = () => {
@@ -582,7 +635,7 @@ function openVideoView(categoryId, focusCard) {
 
   const tl = gsap.timeline({
     onComplete: () => {
-      viewState.transitioning = false;
+      endTransition();
       if (focusCard) focusCard.classList.remove('is-focus');
       gsap.set(categoryCards, { clearProps: 'opacity,scale,x,y' });
       gsap.set(cards, { clearProps: 'opacity,y,scale' });
@@ -671,7 +724,7 @@ function exitToCategories() {
           // Reverse: card starts centered, then returns to slot
           animateCardFromCenter(focusCard).then(() => {
             viewState.activeCategory = null;
-            viewState.transitioning = false;
+            endTransition();
           });
         } else {
           viewState.activeCategory = null;
@@ -686,7 +739,7 @@ function exitToCategories() {
               stagger: 0.08,
               ease: 'expo.out',
               onComplete: () => {
-                viewState.transitioning = false;
+                endTransition();
                 gsap.set(categoryCards, { clearProps: 'opacity,scale,y' });
               },
             }
@@ -1168,7 +1221,7 @@ function openVideoDetail(video, { fromRoute = false } = {}) {
   const destRect = playerWrap.getBoundingClientRect();
 
   const finishOpen = () => {
-    viewState.transitioning = false;
+    endTransition();
   };
 
   // Deep link / no source card — softer fallback
@@ -1317,8 +1370,7 @@ function requestVideoFullscreen(videoEl) {
 
 function requestCloseDetail() {
   const cat = viewState.activeCategory;
-  if (cat) setHash(`#portfolio/${cat}`);
-  else setHash('#portfolio');
+  goBackTo(cat ? `#portfolio/${cat}` : '#portfolio');
 }
 
 function closeVideoDetail({ animate = true, fromRoute = false } = {}) {
@@ -1363,7 +1415,7 @@ function closeVideoDetail({ animate = true, fromRoute = false } = {}) {
     projectInner.innerHTML = '';
     gsap.set([projectPanel, projectInner], { clearProps: 'opacity,y,scale,visibility' });
     restoreDetailSourceCard();
-    viewState.transitioning = false;
+    endTransition();
 
     // Resume ambient loops on the grid
     if (viewState.mode === 'videos') {
@@ -1483,12 +1535,14 @@ function initFilters() {
         b.classList.toggle('active', b === btn);
       });
 
+      const fromCategories = parseRoute().screen === 'categories';
       routing.intent = {
         fromFilter: viewState.mode === 'categories',
         filterBtn: btn,
         sourceCard: null,
       };
-      setHash(`#portfolio/${filter}`);
+      // Category → category is a sideways move: keep one grid entry in history
+      setHash(`#portfolio/${filter}`, { replace: !fromCategories });
     });
   });
 
@@ -1497,7 +1551,7 @@ function initFilters() {
       requestCloseDetail();
       return;
     }
-    setHash('#portfolio');
+    goBackTo('#portfolio');
   });
 }
 
@@ -1510,9 +1564,9 @@ function initKeyboard() {
       if (viewState.mode === 'detail') {
         requestCloseDetail();
       } else if (viewState.mode === 'videos') {
-        setHash('#portfolio');
+        goBackTo('#portfolio');
       } else if (getHash() === '#about') {
-        setHash('#portfolio');
+        closeAboutRoute();
       }
     }
   });
@@ -1772,7 +1826,12 @@ function playLoader() {
         routing.ready = true;
         const boot = routing.bootHash;
         if (boot === '#about' || boot.startsWith('#portfolio/')) {
-          setTimeout(() => setHash(boot, { replace: true }), 200);
+          // Seed the parent levels so browser back walks up like the Back button
+          const route = parseRoute(boot);
+          if (route.screen === 'detail') {
+            history.pushState({ from: '#portfolio' }, '', `#portfolio/${route.category}`);
+          }
+          setTimeout(() => setHash(boot), 200);
         } else {
           updateNav(parseRoute('#portfolio'));
         }
@@ -2163,14 +2222,15 @@ function initRouting() {
 
   aboutClose.addEventListener('click', (e) => {
     e.preventDefault();
-    setHash('#portfolio');
+    closeAboutRoute();
   });
 
   const portfolioLink = header.querySelector('a[href="#portfolio"]');
   if (portfolioLink) {
     portfolioLink.addEventListener('click', (e) => {
       e.preventDefault();
-      setHash('#portfolio');
+      if (getHash() === '#about') closeAboutRoute();
+      else setHash('#portfolio');
     });
   }
 
