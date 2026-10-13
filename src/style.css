@@ -344,6 +344,10 @@ img, video { display: block; max-width: 100%; }
 @media (min-width: 769px) {
   .video-grid {
     --cols: 4;
+    /* Tiles per row, set by fitVideoGrid() so rows come out even (6 → 3 + 3).
+       Tiles keep their --cols size; the side padding centres the narrower rows. */
+    --per-row: var(--cols);
+    padding-inline: calc((1 - var(--per-row) / var(--cols)) * 50%);
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
@@ -353,16 +357,16 @@ img, video { display: block; max-width: 100%; }
   }
 
   .video-card {
-    flex: 0 0 calc(100% / var(--cols));
-    width: calc(100% / var(--cols));
+    flex: 0 0 calc(100% / var(--per-row));
+    width: calc(100% / var(--per-row));
     aspect-ratio: 4 / 5;
     grid-column: auto;
   }
 
   /* A landscape clip takes two columns, same row height */
   .video-card.is-landscape {
-    flex-basis: calc(200% / var(--cols));
-    width: calc(200% / var(--cols));
+    flex-basis: calc(200% / var(--per-row));
+    width: calc(200% / var(--per-row));
     aspect-ratio: 8 / 5;
   }
 }

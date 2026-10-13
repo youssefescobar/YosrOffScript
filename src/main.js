@@ -892,8 +892,9 @@ function populateVideoGrid(categoryId, animate = false) {
 }
 
 /* Tile sizing.
-   Desktop / tablet: pure CSS (4 per row, 3 on tablets, 4:5 tiles, last row
-   centred). Phones: explicit heights — with aspect-ratio alone the 2-column
+   Desktop / tablet: CSS sizes the tiles (4 per row, 3 on tablets, 4:5 tiles);
+   here we only pick how many go in a row so the rows come out even — 6 films
+   sit 3 + 3 instead of 4 + 2. Phones: explicit heights — with aspect-ratio alone the 2-column
    grid rows collapse (overflow:hidden tiles) and each tile ends up overlapped
    by the next. */
 function fitVideoGrid() {
@@ -901,6 +902,17 @@ function fitVideoGrid() {
   const cards = Array.from(videoGrid.querySelectorAll('.video-card'));
   const phone = window.matchMedia('(max-width: 768px)').matches;
   const colW = videoGrid.clientWidth / 2;
+
+  if (phone) {
+    videoGrid.style.removeProperty('--per-row');
+  } else {
+    const maxCols = parseInt(getComputedStyle(videoGrid).getPropertyValue('--cols'), 10) || 4;
+    const slots = cards.reduce((n, c) => n + (c.classList.contains('is-landscape') ? 2 : 1), 0);
+    const rows = Math.max(1, Math.ceil(slots / maxCols));
+    const perRow = Math.max(1, Math.min(maxCols, Math.ceil(slots / rows)));
+    videoGrid.style.setProperty('--per-row', perRow);
+  }
+
   cards.forEach((c) => {
     if (!phone || !colW) {
       c.style.height = '';
