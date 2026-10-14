@@ -1740,7 +1740,9 @@ function preloadAssets() {
     viewport.classList.add('is-active');
     gsap.set(categoryCards, { opacity: 0.01 });
     await Promise.allSettled(
-      Array.from(categoryView.querySelectorAll('img'), (img) => img.decode())
+      Array.from(document.querySelectorAll('.category-view img, .about-panel__photo'), (img) =>
+        img.decode()
+      )
     );
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
@@ -1932,7 +1934,6 @@ function playLoader() {
    =================================================== */
 function initRouting() {
   let aboutAnimated = false;
-  let photoTiltActive = false;
 
   const headerName = document.querySelector('.header__name');
   const photoWrap = document.querySelector('.about-panel__photo-wrap');
@@ -1994,37 +1995,12 @@ function initRouting() {
     });
   });
 
-  function onPhotoMove(e) {
-    if (!photoTiltActive || !photoWrap || !photo || window.innerWidth <= 768) return;
-    const rect = photoWrap.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
-    const rotY = (x - 0.5) * 20;
-    const rotX = (0.5 - y) * 20;
-    gsap.to(photo, {
-      rotateX: rotX,
-      rotateY: rotY,
-      duration: 0.4,
-      ease: 'power2.out',
-      overwrite: 'auto',
-    });
-  }
-
   function onPhotoLeave() {
     if (isTouchUi()) return;
     setPhotoHover(false);
-    if (!photo || window.innerWidth <= 768) return;
-    gsap.to(photo, {
-      rotateX: 0,
-      rotateY: 0,
-      duration: 0.6,
-      ease: 'expo.out',
-      overwrite: 'auto',
-    });
   }
 
   if (photoWrap) {
-    photoWrap.addEventListener('mousemove', onPhotoMove);
     photoWrap.addEventListener('mouseleave', onPhotoLeave);
 
     // Mobile: tap cycles colorize ↔ muted (pointerup avoids sticky-hover bugs)
@@ -2069,7 +2045,6 @@ function initRouting() {
       return;
     }
     aboutAnimated = true;
-    photoTiltActive = true;
 
     if (cardFlipper) cardFlipper.classList.remove('is-flipped');
 
@@ -2103,9 +2078,15 @@ function initRouting() {
     const headerTargetX = aRefX - hRefX;
     const headerTargetY = aRefY - hRefY;
 
-    gsap.set(photo, { scale: 1.3, clipPath: 'inset(100% 0% 0% 0%)' });
+    // Bottom-up wipe as two opposite slides (the frame rises while the photo
+    // inside sinks by the same amount): GPU-composited, where animating
+    // clip-path repainted the whole photo every frame.
+    gsap.set(photoWrap, { yPercent: 100, willChange: 'transform' });
+    gsap.set(photo, { yPercent: -100, scale: 1.3 });
     const reveals = aboutPanel.querySelectorAll('.about-reveal');
     gsap.set(reveals, { opacity: 0, y: 25 });
+    // Own layers while the names fly, so the scale tweens don't repaint the page
+    gsap.set([headerName, aboutName], { willChange: 'transform, opacity' });
 
     aboutPanel.style.removeProperty('visibility');
     aboutPanel.style.removeProperty('opacity');
@@ -2130,6 +2111,7 @@ function initRouting() {
       opacity: 1,
       duration: openDuration,
       ease: 'expo.inOut',
+      onComplete: () => gsap.set(aboutName, { clearProps: 'willChange' }),
     });
 
     gsap.to(headerName, {
@@ -2142,16 +2124,17 @@ function initRouting() {
       onComplete: () => {
         // Brand lives in About now — keep it out of the nav until close
         gsap.set(headerName, {
-          clearProps: 'transform',
+          clearProps: 'transform,willChange',
           opacity: 0,
           visibility: 'hidden',
         });
       },
     });
 
+    gsap.to(photoWrap, { yPercent: 0, duration: 1.4, ease: 'expo.inOut', delay: 0.1 });
     gsap.to(photo, {
+      yPercent: 0,
       scale: 1,
-      clipPath: 'inset(0% 0% 0% 0%)',
       duration: 1.4,
       ease: 'expo.inOut',
       delay: 0.1,
@@ -2168,7 +2151,6 @@ function initRouting() {
   }
 
   function closeAbout() {
-    photoTiltActive = false;
     setPhotoHover(false);
 
     if (!aboutAnimated) {
@@ -2197,7 +2179,7 @@ function initRouting() {
     gsap.set(headerName, { opacity: 1, visibility: 'visible' });
     const hRect = headerName.getBoundingClientRect();
 
-    gsap.set([headerName, aboutName], { transformOrigin: '0% 50%' });
+    gsap.set([headerName, aboutName], { transformOrigin: '0% 50%', willChange: 'transform, opacity' });
 
     const hRefX = hRect.left;
     const hRefY = hRect.top + hRect.height / 2;
@@ -2220,12 +2202,9 @@ function initRouting() {
 
     const reveals = aboutPanel.querySelectorAll('.about-reveal');
     gsap.to(reveals, { opacity: 0, y: -15, duration: 0.4, ease: 'power2.in' });
-    gsap.to(photo, {
-      clipPath: 'inset(0% 0% 100% 0%)',
-      scale: 1.1,
-      duration: 0.6,
-      ease: 'power2.in',
-    });
+    // Reverse wipe: frame rises out the top while the photo holds still
+    gsap.to(photoWrap, { yPercent: -100, duration: 0.6, ease: 'power2.in' });
+    gsap.to(photo, { yPercent: 100, scale: 1.1, duration: 0.6, ease: 'power2.in' });
 
     const closeDuration = isMobile ? 0.55 : 1.2;
     const closeEase = isMobile ? 'power3.out' : 'expo.inOut';
@@ -2247,7 +2226,7 @@ function initRouting() {
       duration: closeDuration,
       ease: closeEase,
       onComplete: () => {
-        gsap.set(headerName, { clearProps: 'transform,opacity,visibility' });
+        gsap.set(headerName, { clearProps: 'transform,opacity,visibility,willChange' });
         aboutPanel.style.transition = 'none';
         aboutPanel.classList.remove('is-open');
         if (aboutCard) {
@@ -2256,8 +2235,9 @@ function initRouting() {
         }
         if (cardFlipper) cardFlipper.classList.remove('is-flipped');
         setPhotoHover(false);
-        gsap.set(aboutName, { opacity: 0, clearProps: 'x,y,scale,transformOrigin' });
-        gsap.set(photo, { clearProps: 'clipPath,scale,rotateX,rotateY' });
+        gsap.set(aboutName, { opacity: 0, clearProps: 'x,y,scale,transformOrigin,willChange' });
+        gsap.set(photo, { clearProps: 'transform' });
+        gsap.set(photoWrap, { clearProps: 'transform,willChange' });
         gsap.set(reveals, { opacity: 0, y: 25 });
         const backdrop = aboutPanel.querySelector('.about-panel__backdrop');
         gsap.set(backdrop, { clearProps: 'opacity' });

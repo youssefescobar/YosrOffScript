@@ -730,14 +730,17 @@ img, video { display: block; max-width: 100%; }
 .about-panel__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.92);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  /* Opaque, no backdrop blur: the blur cost a full-screen GPU pass on every
+     animated frame; the panel still fades in over the portfolio */
+  background: #000;
   cursor: pointer;
   overflow: hidden;
-  transition: background 0.7s var(--ease-out-expo);
 }
 
+/* about-glow.jpg is the colour photo shrunk to 160px with the blur, saturation
+   and darkening baked in (ffmpeg: scale=160:-2,gblur=sigma=6,eq=saturation=1.35,
+   colorchannelmixer=rr=0.55:gg=0.55:bb=0.55). Upscaled it looks the same as a
+   live blur(72px) filter, which cost a full-screen GPU blur every frame. */
 .about-panel__backdrop-glow {
   position: absolute;
   inset: -18%;
@@ -748,8 +751,7 @@ img, video { display: block; max-width: 100%; }
       rgba(90, 110, 130, 0.12) 42%,
       rgba(0, 0, 0, 0.55) 100%
     ),
-    url('/yosr_colorized.jpg') center 20% / cover no-repeat;
-  filter: blur(72px) saturate(1.35) brightness(0.55);
+    url('/about-glow.jpg') center 20% / cover no-repeat;
   opacity: 0;
   transform: scale(1.08);
   pointer-events: none;
@@ -757,10 +759,6 @@ img, video { display: block; max-width: 100%; }
     opacity 0.75s var(--ease-out-expo),
     transform 0.9s var(--ease-out-expo);
   will-change: opacity, transform;
-}
-
-.about-panel.is-photo-hover .about-panel__backdrop {
-  background: rgba(8, 6, 4, 0.78);
 }
 
 .about-panel.is-photo-hover .about-panel__backdrop-glow {
@@ -783,6 +781,7 @@ img, video { display: block; max-width: 100%; }
   flex-shrink: 0;
   width: 280px;
   position: relative;
+  overflow: clip; /* hides the photo frame while it slides in/out (wipe) */
 }
 
 .about-card__aura {
@@ -839,8 +838,9 @@ img, video { display: block; max-width: 100%; }
 }
 
 .about-panel__photo--base {
+  /* Static: on hover the opaque colour copy fades in over it, so animating
+     this filter too only cost a repaint of the whole photo every frame */
   filter: grayscale(0.7) brightness(0.82) contrast(1.05);
-  transition: filter 0.7s var(--ease-out-expo);
 }
 
 .about-panel__photo--color {
@@ -851,11 +851,8 @@ img, video { display: block; max-width: 100%; }
   opacity: 0;
   filter: brightness(1.02) contrast(1.02) saturate(1.05);
   transition: opacity 0.7s var(--ease-out-expo);
+  will-change: opacity;
   pointer-events: none;
-}
-
-.about-panel.is-photo-hover .about-panel__photo--base {
-  filter: grayscale(0.15) brightness(0.95) contrast(1.02);
 }
 
 .about-panel.is-photo-hover .about-panel__photo--color {
@@ -869,10 +866,6 @@ img, video { display: block; max-width: 100%; }
 
 /* Desktop only — avoid iOS sticky :hover locking colorize on */
 @media (hover: hover) and (pointer: fine) {
-  .about-panel__photo-wrap:hover .about-panel__photo--base {
-    filter: grayscale(0.15) brightness(0.95) contrast(1.02);
-  }
-
   .about-panel__photo-wrap:hover .about-panel__photo--color {
     opacity: 1;
   }
@@ -1029,6 +1022,7 @@ img, video { display: block; max-width: 100%; }
 .about-reveal {
   opacity: 0;
   transform: translateY(25px);
+  will-change: transform, opacity; /* fade in/out without repainting the panel */
 }
 
 /* ===================================================
@@ -1242,6 +1236,96 @@ img, video { display: block; max-width: 100%; }
   .about-card,
   .about-panel__photo-wrap {
     width: 220px;
+  }
+}
+
+/* ===================================================
+   ABOUT — desktop split screen: full-height portrait on the left fading
+   into black, oversized name crossing from photo into the text column
+   =================================================== */
+@media (min-width: 769px) {
+  .about-panel {
+    align-items: stretch;
+  }
+
+  .about-panel__inner {
+    max-width: none;
+    padding: 0;
+    gap: 0;
+    align-items: stretch;
+  }
+
+  .about-card {
+    width: 50%;
+  }
+
+  /* Card glow sits 20px outside the card: it would make the panel scroll */
+  .about-card__aura {
+    display: none;
+  }
+
+  .about-card__flipper,
+  .about-card__front,
+  .about-panel__photo-wrap {
+    height: 100%;
+  }
+
+  .about-panel__photo-wrap,
+  .about-panel.is-photo-hover .about-panel__photo-wrap,
+  .about-panel__photo-wrap:hover {
+    width: 100%;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .about-panel__photo-stack {
+    height: 100%;
+    aspect-ratio: auto;
+    -webkit-mask-image: linear-gradient(
+      to right,
+      #000 0%,
+      #000 55%,
+      rgba(0, 0, 0, 0.85) 72%,
+      rgba(0, 0, 0, 0.4) 88%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      #000 0%,
+      #000 55%,
+      rgba(0, 0, 0, 0.85) 72%,
+      rgba(0, 0, 0, 0.4) 88%,
+      transparent 100%
+    );
+  }
+
+  .about-panel__photo {
+    height: 100%;
+    aspect-ratio: auto;
+  }
+
+  .about-panel__content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: var(--header-h) clamp(32px, 6vw, 120px) var(--footer-h) 0;
+  }
+
+  .about-panel__name {
+    font-size: clamp(2.6rem, 5.6vw, 7rem);
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    white-space: nowrap;
+    margin-left: -10vw;
+    margin-bottom: 18px;
+    align-self: flex-start;
+  }
+
+  .about-panel__content > :not(.about-panel__name) {
+    max-width: 480px;
   }
 }
 
