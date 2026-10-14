@@ -1303,7 +1303,7 @@ img, video { display: block; max-width: 100%; }
   .about-panel__photo {
     height: 100%;
     aspect-ratio: auto;
-    object-position: center 70%; /* show more of the figure, not just the head */
+    object-position: center 50%; /* show more of the figure, not just the head */
   }
 
   .about-panel__content {
