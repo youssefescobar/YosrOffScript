@@ -67,7 +67,16 @@ img, video { display: block; max-width: 100%; }
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Black backdrop on its own layer: fading its opacity on exit is composited,
+   where tweening the loader's background-color repainted the whole screen
+   every frame. */
+.loader__bg {
+  position: absolute;
+  inset: 0;
   background: var(--color-bg);
+  will-change: opacity;
 }
 
 .loader__inner {
@@ -192,6 +201,10 @@ img, video { display: block; max-width: 100%; }
   padding: calc(var(--header-h) + 16px) 28px calc(var(--footer-h) + 16px);
   align-content: center;
   transform-origin: center center;
+}
+
+.category-view.is-entering {
+  pointer-events: none;
 }
 
 .category-view[hidden],
@@ -338,16 +351,15 @@ img, video { display: block; max-width: 100%; }
   grid-column: span 2;
 }
 
-/* Desktop / tablet: 4 tiles per row (3 on tablets), all the same 4:5 shape,
-   stitched edge to edge. An incomplete last row is centred. The grid scrolls
-   (wheel smoothing lives in main.js) and never shows a scrollbar. */
+/* Desktop / tablet: up to 4 tiles per row (3 on tablets), 4:5, stitched edge
+   to edge across the full width. fitVideoGrid() picks the row length
+   (--per-row) so rows come out even (6 → 3 + 3), and sets --tile-h to fill
+   the height when there is only one row. The grid scrolls (wheel smoothing
+   lives in main.js) and never shows a scrollbar. */
 @media (min-width: 769px) {
   .video-grid {
     --cols: 4;
-    /* Tiles per row, set by fitVideoGrid() so rows come out even (6 → 3 + 3).
-       Tiles keep their --cols size; the side padding centres the narrower rows. */
     --per-row: var(--cols);
-    padding-inline: calc((1 - var(--per-row) / var(--cols)) * 50%);
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
@@ -359,6 +371,7 @@ img, video { display: block; max-width: 100%; }
   .video-card {
     flex: 0 0 calc(100% / var(--per-row));
     width: calc(100% / var(--per-row));
+    height: var(--tile-h, auto);
     aspect-ratio: 4 / 5;
     grid-column: auto;
   }

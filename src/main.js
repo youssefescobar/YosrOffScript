@@ -920,6 +920,12 @@ function fitVideoGrid() {
     const rows = Math.max(1, Math.ceil(slots / maxCols));
     const perRow = Math.max(1, Math.min(maxCols, Math.ceil(slots / rows)));
     videoGrid.style.setProperty('--per-row', perRow);
+    // A single row would leave empty bands above and below: stretch it to full height.
+    if (rows === 1 && videoGrid.clientHeight) {
+      videoGrid.style.setProperty('--tile-h', `${videoGrid.clientHeight}px`);
+    } else {
+      videoGrid.style.removeProperty('--tile-h');
+    }
   }
 
   cards.forEach((c) => {
@@ -1099,7 +1105,18 @@ function setMetaPose(card, hover, animate = true) {
 function setCardHover(card, on, { animate = true } = {}) {
   const wantHover = !!on;
   if (card.classList.contains('is-hover') === wantHover) return;
+  // The class flips the lines from centred to left-aligned; slide each line
+  // from its old spot instead of letting it jump (FLIP).
+  const lines = animate ? Array.from(card.querySelectorAll('.video-card__meta-inner > *')) : [];
+  const before = lines.map((el) => el.offsetLeft);
   card.classList.toggle('is-hover', wantHover);
+  lines.forEach((el, i) => {
+    gsap.fromTo(
+      el,
+      { x: before[i] - el.offsetLeft },
+      { x: 0, duration: isTouchUi() ? 0.55 : 0.95, ease: 'expo.inOut', overwrite: true }
+    );
+  });
   setMetaPose(card, wantHover, animate);
 }
 
@@ -1717,6 +1734,16 @@ function preloadAssets() {
     });
     await new Promise((r) => setTimeout(r, HOLD_AT_FULL_MS));
 
+    // Warm up the first screen behind the opaque loader: decode the covers and
+    // let the browser lay out and paint the (still transparent) category view
+    // now, so the click into the site doesn't stall on that first paint.
+    viewport.classList.add('is-active');
+    gsap.set(categoryCards, { opacity: 0.01 });
+    await Promise.allSettled(
+      Array.from(categoryView.querySelectorAll('img'), (img) => img.decode())
+    );
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
     if (unlocked) return;
     unlocked = true;
     cancelAnimationFrame(progressRaf);
@@ -1798,12 +1825,13 @@ function playLoader() {
 
     gsap.set('.header', { zIndex: 101 });
 
+    gsap.set(['.loader__tagline', '.loader__cta', '.loader__progress'], { willChange: 'opacity' });
     gsap.to(['.loader__tagline', '.loader__cta', '.loader__progress'], {
       opacity: 0,
       duration: 0.5,
     });
-    gsap.to(loader, {
-      backgroundColor: 'rgba(0,0,0,0)',
+    gsap.to('.loader__bg', {
+      opacity: 0,
       duration: 1.2,
       ease: 'power2.inOut',
     });
@@ -1812,7 +1840,9 @@ function playLoader() {
     gsap.set('.header__left', { opacity: 1 });
     const hRect = headerName.getBoundingClientRect();
 
-    gsap.set([loaderText, headerName], { transformOrigin: '0% 50%' });
+    // Own GPU layers while they fly, so the scale tweens don't repaint the
+    // full-screen loader and header every frame.
+    gsap.set([loaderText, headerName], { transformOrigin: '0% 50%', willChange: 'transform, opacity' });
 
     const lRefX = lRect.left;
     const lRefY = lRect.top + lRect.height / 2;
@@ -1842,7 +1872,7 @@ function playLoader() {
       ease: 'expo.inOut',
       onComplete: () => {
         loader.style.display = 'none';
-        gsap.set(headerName, { clearProps: 'transform,opacity' });
+        gsap.set(headerName, { clearProps: 'transform,opacity,willChange' });
         gsap.set('.header', { clearProps: 'zIndex' });
 
         // Enable routing only after intro settles — then honor deep link
@@ -1870,6 +1900,9 @@ function playLoader() {
       ease: 'expo.inOut',
     });
 
+    // No hover effects mid-entrance: a cursor resting where a card lands would
+    // start its letter-spacing transition and relayout every frame.
+    categoryView.classList.add('is-entering');
     gsap.to(categoryCards, {
       opacity: 1,
       scale: 1,
@@ -1878,8 +1911,10 @@ function playLoader() {
       stagger: 0.1,
       ease: 'expo.out',
       delay: 0.35,
+      onComplete: () => categoryView.classList.remove('is-entering'),
     });
 
+    gsap.set(['.header__nav', '.footer'], { willChange: 'transform, opacity' });
     gsap.to(['.header__nav', '.footer'], {
       y: 0,
       opacity: 1,
@@ -1887,6 +1922,7 @@ function playLoader() {
       stagger: 0.2,
       ease: 'expo.out',
       delay: 0.6,
+      onComplete: () => gsap.set(['.header__nav', '.footer'], { clearProps: 'willChange' }),
     });
   }
 }
