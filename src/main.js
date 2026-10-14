@@ -1006,12 +1006,9 @@ function previewObserver() {
           if (viewState.mode === 'detail') return;
           // Reduced motion: keep the still poster, never load/play the loop
           if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-          if (!videoEl.getAttribute('src')) {
-            videoEl.setAttribute('src', videoEl.dataset.src);
-            videoEl.preload = 'auto';
-          }
-          startIdleLoop(card, videoEl);
+          queueIdleLoop(card, videoEl);
         } else {
+          unqueueIdleLoop(card);
           videoEl.pause();
           card.classList.remove('is-playing');
         }
@@ -1020,6 +1017,39 @@ function previewObserver() {
     { threshold: 0.25 }
   );
   return _previewObserver;
+}
+
+/* Starting every preview decoder in the same frame stalls the page for about
+   half a second on integrated GPUs, so loops start one at a time. */
+const previewQueue = [];
+let previewTimer = 0;
+
+function queueIdleLoop(card, videoEl) {
+  if (!videoEl || previewQueue.some(([c]) => c === card)) return;
+  previewQueue.push([card, videoEl]);
+  if (!previewTimer) drainPreviewQueue();
+}
+
+function unqueueIdleLoop(card) {
+  const i = previewQueue.findIndex(([c]) => c === card);
+  if (i >= 0) previewQueue.splice(i, 1);
+}
+
+function drainPreviewQueue() {
+  const next = previewQueue.shift();
+  if (!next) {
+    previewTimer = 0;
+    return;
+  }
+  const [card, videoEl] = next;
+  if (card.isConnected && viewState.mode !== 'detail') {
+    if (!videoEl.getAttribute('src')) {
+      videoEl.setAttribute('src', videoEl.dataset.src);
+      videoEl.preload = 'auto';
+    }
+    startIdleLoop(card, videoEl);
+  }
+  previewTimer = setTimeout(drainPreviewQueue, 150);
 }
 
 function startIdleLoop(card, videoEl) {
@@ -1150,12 +1180,10 @@ function stopAllPreviews() {
       setMetaPose(card, false, false);
     }
     card.classList.remove('is-playing', 'is-previewing');
-    if (v) {
-      v.pause();
-      try {
-        v.currentTime = 0;
-      } catch (_) {}
-    }
+    unqueueIdleLoop(card);
+    // Pause only: seeking every clip back to 0 at once is decoder work right
+    // as a transition starts, and startIdleLoop rewinds long-run clips anyway
+    if (v) v.pause();
   });
   viewState.playingVideo = null;
 }
@@ -1218,7 +1246,6 @@ function openVideoDetail(video, { fromRoute = false } = {}) {
           controlslist="nodownload"
           oncontextmenu="return false"
           playsinline
-          autoplay
           preload="metadata"
         ></video>
       </div>
@@ -1260,7 +1287,10 @@ function openVideoDetail(video, { fromRoute = false } = {}) {
   gsap.set(metaItems, { opacity: 0 });
   const destRect = playerWrap.getBoundingClientRect();
 
+  // Start playback once the player has landed: decoding the first frames
+  // mid-flight competes with the fly-in animation (the poster shows meanwhile)
   const finishOpen = () => {
+    if (viewState.detailVideoEl === detailVideo) detailVideo.play().catch(() => {});
     endTransition();
   };
 
@@ -1316,7 +1346,8 @@ function openVideoDetail(video, { fromRoute = false } = {}) {
     maxWidth: 'none',
     borderRadius: 0,
     zIndex: 60,
-    boxShadow: '0 8px 28px rgba(0,0,0,0.35)',
+    // One fixed shadow: tweening a large blurred shadow repaints it every frame
+    boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
     opacity: 1,
   });
   gsap.set(metaEl, { opacity: 1 });
@@ -1341,7 +1372,6 @@ function openVideoDetail(video, { fromRoute = false } = {}) {
     playerWrap,
     {
       scale: 1.045,
-      boxShadow: '0 28px 70px rgba(0,0,0,0.55)',
       duration: 0.32,
       ease: 'power2.out',
     },
@@ -1358,7 +1388,6 @@ function openVideoDetail(video, { fromRoute = false } = {}) {
       height: destRect.height,
       borderRadius: 12,
       scale: 1,
-      boxShadow: '0 24px 60px rgba(0,0,0,0.55)',
       duration: 0.85,
       ease: 'power3.inOut',
       onComplete: () => {
@@ -1461,7 +1490,7 @@ function closeVideoDetail({ animate = true, fromRoute = false } = {}) {
     if (viewState.mode === 'videos') {
       videoGrid.querySelectorAll('.video-card').forEach((card) => {
         const v = card.querySelector('.video-card__video');
-        startIdleLoop(card, v);
+        if (v && v.getAttribute('src')) queueIdleLoop(card, v);
       });
     }
   };
@@ -1516,7 +1545,6 @@ function closeVideoDetail({ animate = true, fromRoute = false } = {}) {
         width: targetRect.width,
         height: targetRect.height,
         borderRadius: 0,
-        boxShadow: '0 8px 28px rgba(0,0,0,0.35)',
         duration: 0.7,
         ease: 'power3.inOut',
       },
