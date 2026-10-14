@@ -27,8 +27,8 @@ function media(slug) {
 }
 
 const ALL_CATEGORIES = [
-  { id: 'fashion', label: 'Fashion', coverFrom: 'fashion-sakina' },
-  { id: 'bts', label: 'BTS', coverFrom: 'bts-lail-fashion' },
+  { id: 'fashion', label: 'Fashion & Apparel', coverFrom: 'fashion-sakina' },
+  { id: 'bts', label: 'Behind The Scenes', coverFrom: 'bts-lail-fashion' },
   { id: 'events', label: 'Events', coverFrom: 'events-salata' },
   { id: 'fnb', label: 'F&B', coverFrom: null },
   { id: 'film', label: 'Film', coverFrom: 'film-the-hungary-experience' },
@@ -38,27 +38,27 @@ const ALL_CATEGORIES = [
 const ENTRIES = [
   // Fashion
   { slug: 'fashion-casa-lila', category: 'fashion', title: 'Casa Lila' },
-  { slug: 'fashion-sakina', category: 'fashion', title: 'Sakina' },
   { slug: 'fashion-worood', category: 'fashion', title: 'Worood' },
   { slug: 'fashion-shakti-the-brand-l', category: 'fashion', title: 'Shakti the Brand I', brand: 'Shakti' },
   { slug: 'fashion-shakti-the-brand-ll', category: 'fashion', title: 'Shakti the Brand II', brand: 'Shakti' },
   { slug: 'fashion-shakti-the-brand-lll', category: 'fashion', title: 'Shakti the Brand III', brand: 'Shakti' },
-  { slug: 'fashion-l', category: 'fashion', title: 'Untitled I' },
-  { slug: 'fashion-ll', category: 'fashion', title: 'Untitled II' },
+  { slug: 'fashion-l', category: 'fashion', title: 'I' },
+  { slug: 'fashion-ll', category: 'fashion', title: 'II' },
+  { slug: 'fashion-sakina', category: 'fashion', title: 'Sakina' },
 
   // BTS
-  { slug: 'bts-lail-fashion', category: 'bts', title: 'Lail Fashion' },
-  { slug: 'bts-bossa-nova', category: 'bts', title: 'Bossa Nova' },
-  { slug: 'bts-jjs-designs', category: 'bts', title: 'JJ’s Designs' },
   { slug: 'bts-atm-production-in-your-shoe', category: 'bts', title: 'In Your Shoe', brand: 'ATM Production' },
-  { slug: 'bts-atm-production-roaia', category: 'bts', title: 'Roaia', brand: 'ATM Production' },
+  { slug: 'bts-jjs-designs', category: 'bts', title: 'JJ’s Designs' },
+  { slug: 'bts-bossa-nova', category: 'bts', title: 'Bossa Nova' },
+  { slug: 'bts-lail-fashion', category: 'bts', title: 'Lail Fashion' },
   { slug: 'bts-atm-production-heddy-rassekh', category: 'bts', title: 'Heddy Rassekh', brand: 'ATM Production' },
+  { slug: 'bts-atm-production-roaia', category: 'bts', title: 'Roaia', brand: 'ATM Production' },
 
   // Events
-  { slug: 'events-salata', category: 'events', title: 'Salata' },
-  { slug: 'events-knowledge-valley-schools', category: 'events', title: 'Knowledge Valley Schools' },
-  { slug: 'events-edu-gate-must', category: 'events', title: 'EDU Gate', brand: 'MUST' },
   { slug: 'events-outing-worood', category: 'events', title: 'Outing', brand: 'Worood' },
+  { slug: 'events-edu-gate-must', category: 'events', title: 'EDU Gate', brand: 'MUST' },
+  { slug: 'events-knowledge-valley-schools', category: 'events', title: 'Knowledge Valley Schools' },
+  { slug: 'events-salata', category: 'events', title: 'Salata' },
 
   // Film
   { slug: 'film-the-hungary-experience', category: 'film', title: 'The Hungary Experience' },
