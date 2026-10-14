@@ -735,7 +735,7 @@ img, video { display: block; max-width: 100%; }
       rgba(90, 110, 130, 0.12) 42%,
       rgba(0, 0, 0, 0.55) 100%
     ),
-    url('/yosr_colorized_2.jpg') center 20% / cover no-repeat;
+    url('/yosr_colorized.jpg') center 20% / cover no-repeat;
   filter: blur(72px) saturate(1.35) brightness(0.55);
   opacity: 0;
   transform: scale(1.08);
