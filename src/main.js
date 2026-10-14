@@ -1933,7 +1933,6 @@ function playLoader() {
    8. ROUTING (About) — preserved from prior design
    =================================================== */
 function initRouting() {
-  let aboutAnimated = false;
 
   const headerName = document.querySelector('.header__name');
   const photoWrap = document.querySelector('.about-panel__photo-wrap');
@@ -2038,140 +2037,121 @@ function initRouting() {
     });
   }
 
+  // closed → opening → open → closing → closed. A route change that lands
+  // mid-animation reverses the running timeline instead of starting another,
+  // so About never snaps, and open/close are safe to call repeatedly.
+  let aboutState = 'closed';
+  let aboutTl = null;
+  const reveals = aboutPanel.querySelectorAll('.about-reveal');
+  const backdrop = aboutPanel.querySelector('.about-panel__backdrop');
+
+  // Transform that lays `from` over `to`: left edges and vertical centres meet
+  function morph(from, to) {
+    return {
+      x: to.left - from.left,
+      y: to.top + to.height / 2 - (from.top + from.height / 2),
+      scale: to.height / from.height,
+    };
+  }
+
+  function settleOpen() {
+    aboutState = 'open';
+    aboutTl = null;
+    // Brand lives in About now — keep it out of the nav until close
+    gsap.set(headerName, { clearProps: 'transform,willChange', opacity: 0, visibility: 'hidden' });
+    gsap.set(getAboutTarget(), { clearProps: 'willChange' });
+  }
+
+  function settleClosed() {
+    aboutState = 'closed';
+    aboutTl = null;
+    gsap.set(headerName, { clearProps: 'transform,opacity,visibility,willChange' });
+    aboutPanel.style.transition = 'none';
+    aboutPanel.classList.remove('is-open');
+    gsap.set(aboutPanel, { clearProps: 'opacity' });
+    if (aboutCard) {
+      gsap.set(aboutCard, { clearProps: 'opacity,scale,y' });
+      aboutCard.removeAttribute('data-active-brand');
+    }
+    if (cardFlipper) cardFlipper.classList.remove('is-flipped');
+    setPhotoHover(false);
+    gsap.set(getAboutTarget(), { opacity: 0, clearProps: 'x,y,scale,transformOrigin,willChange' });
+    gsap.set(photo, { clearProps: 'transform' });
+    gsap.set(photoWrap, { clearProps: 'transform,willChange' });
+    gsap.set(reveals, { opacity: 0, y: 25 });
+    gsap.set(backdrop, { clearProps: 'opacity' });
+    requestAnimationFrame(() => aboutPanel.style.removeProperty('transition'));
+  }
+
   function openAbout() {
-    if (aboutAnimated) {
-      aboutPanel.classList.add('is-open');
-      gsap.set(headerName, { opacity: 0, visibility: 'hidden' });
+    if (aboutState === 'open' || aboutState === 'opening') return;
+    if (aboutState === 'closing') {
+      aboutState = 'opening';
+      aboutTl.reversed(!aboutTl.reversed()); // flip direction: reverse() only ever plays backwards
       return;
     }
-    aboutAnimated = true;
+    aboutState = 'opening';
 
     if (cardFlipper) cardFlipper.classList.remove('is-flipped');
 
     const aboutName = getAboutTarget();
     const hRect = headerName.getBoundingClientRect();
 
-    aboutPanel.style.visibility = 'visible';
-    aboutPanel.style.opacity = '0';
+    // GSAP owns the panel fade (not the CSS transition) so it can reverse
     aboutPanel.style.transition = 'none';
+    aboutPanel.classList.add('is-open');
+    gsap.set(aboutPanel, { opacity: 0 });
     gsap.set(aboutName, { opacity: 1, x: 0, y: 0, scale: 1 });
     const aRect = aboutName.getBoundingClientRect();
 
-    gsap.set([headerName, aboutName], { transformOrigin: '0% 50%' });
-
-    const hRefX = hRect.left;
-    const hRefY = hRect.top + hRect.height / 2;
-    const aRefX = aRect.left;
-    const aRefY = aRect.top + aRect.height / 2;
-
-    const aboutStartScale = hRect.height / aRect.height;
-    const aboutStartX = hRefX - aRefX;
-    const aboutStartY = hRefY - aRefY;
-    gsap.set(aboutName, {
-      x: aboutStartX,
-      y: aboutStartY,
-      scale: aboutStartScale,
-      opacity: 0,
+    gsap.set([headerName, aboutName], {
+      transformOrigin: '0% 50%',
+      // Own layers while the names fly, so the scale tweens don't repaint the page
+      willChange: 'transform, opacity',
     });
-
-    const headerTargetScale = aRect.height / hRect.height;
-    const headerTargetX = aRefX - hRefX;
-    const headerTargetY = aRefY - hRefY;
+    gsap.set(aboutName, { ...morph(aRect, hRect), opacity: 0 });
 
     // Bottom-up wipe as two opposite slides (the frame rises while the photo
     // inside sinks by the same amount): GPU-composited, where animating
     // clip-path repainted the whole photo every frame.
     gsap.set(photoWrap, { yPercent: 100, willChange: 'transform' });
     gsap.set(photo, { yPercent: -100, scale: 1.3 });
-    const reveals = aboutPanel.querySelectorAll('.about-reveal');
     gsap.set(reveals, { opacity: 0, y: 25 });
-    // Own layers while the names fly, so the scale tweens don't repaint the page
-    gsap.set([headerName, aboutName], { willChange: 'transform, opacity' });
-
-    aboutPanel.style.removeProperty('visibility');
-    aboutPanel.style.removeProperty('opacity');
-    aboutPanel.style.removeProperty('transition');
-    aboutPanel.classList.add('is-open');
 
     const isMobile = window.innerWidth <= 768;
     const openDuration = isMobile ? 0.7 : 1.2;
 
+    aboutTl = gsap.timeline({ onComplete: settleOpen, onReverseComplete: settleClosed });
+    aboutTl
+      .to(aboutPanel, { opacity: 1, duration: 0.6, ease: 'expo.out' }, 0)
+      .to(aboutName, { x: 0, y: 0, scale: 1, opacity: 1, duration: openDuration, ease: 'expo.inOut' }, 0)
+      .to(headerName, { ...morph(hRect, aRect), opacity: 0, duration: openDuration, ease: 'expo.inOut' }, 0)
+      .to(photoWrap, { yPercent: 0, duration: 1.4, ease: 'expo.inOut' }, 0.1)
+      .to(photo, { yPercent: 0, scale: 1, duration: 1.4, ease: 'expo.inOut' }, 0.1)
+      .to(reveals, { opacity: 1, y: 0, duration: 1, stagger: 0.1, ease: 'expo.out' }, 0.4);
+
     if (isMobile && aboutCard) {
-      gsap.fromTo(
+      aboutTl.fromTo(
         aboutCard,
         { opacity: 0, scale: 0.94, y: 30 },
-        { opacity: 1, scale: 1, y: 0, duration: 0.7, ease: 'expo.out', delay: 0.08 }
+        { opacity: 1, scale: 1, y: 0, duration: 0.7, ease: 'expo.out' },
+        0.08
       );
     }
-
-    gsap.to(aboutName, {
-      x: 0,
-      y: 0,
-      scale: 1,
-      opacity: 1,
-      duration: openDuration,
-      ease: 'expo.inOut',
-      onComplete: () => gsap.set(aboutName, { clearProps: 'willChange' }),
-    });
-
-    gsap.to(headerName, {
-      x: headerTargetX,
-      y: headerTargetY,
-      scale: headerTargetScale,
-      opacity: 0,
-      duration: openDuration,
-      ease: 'expo.inOut',
-      onComplete: () => {
-        // Brand lives in About now — keep it out of the nav until close
-        gsap.set(headerName, {
-          clearProps: 'transform,willChange',
-          opacity: 0,
-          visibility: 'hidden',
-        });
-      },
-    });
-
-    gsap.to(photoWrap, { yPercent: 0, duration: 1.4, ease: 'expo.inOut', delay: 0.1 });
-    gsap.to(photo, {
-      yPercent: 0,
-      scale: 1,
-      duration: 1.4,
-      ease: 'expo.inOut',
-      delay: 0.1,
-    });
-
-    gsap.to(reveals, {
-      opacity: 1,
-      y: 0,
-      duration: 1,
-      stagger: 0.1,
-      ease: 'expo.out',
-      delay: 0.4,
-    });
   }
 
   function closeAbout() {
+    if (aboutState === 'closed' || aboutState === 'closing') return;
     setPhotoHover(false);
-
-    if (!aboutAnimated) {
-      aboutPanel.classList.remove('is-open');
+    if (aboutState === 'opening') {
+      aboutState = 'closing';
+      aboutTl.reversed(!aboutTl.reversed()); // flip direction: reverse() only ever plays backwards
       return;
     }
-    aboutAnimated = false;
+    aboutState = 'closing';
 
     const isMobile = window.innerWidth <= 768;
     const aboutName = getAboutTarget();
-
-    if (isMobile && aboutCard) {
-      gsap.to(aboutCard, {
-        opacity: 0,
-        scale: 0.92,
-        y: 40,
-        duration: 0.45,
-        ease: 'power2.in',
-      });
-    }
-
     const aRect = aboutName.getBoundingClientRect();
 
     // Bring nav brand back for the reverse morph into the header
@@ -2180,83 +2160,32 @@ function initRouting() {
     const hRect = headerName.getBoundingClientRect();
 
     gsap.set([headerName, aboutName], { transformOrigin: '0% 50%', willChange: 'transform, opacity' });
-
-    const hRefX = hRect.left;
-    const hRefY = hRect.top + hRect.height / 2;
-    const aRefX = aRect.left;
-    const aRefY = aRect.top + aRect.height / 2;
-
-    const headerStartScale = aRect.height / hRect.height;
-    const headerStartX = aRefX - hRefX;
-    const headerStartY = aRefY - hRefY;
-    gsap.set(headerName, {
-      x: headerStartX,
-      y: headerStartY,
-      scale: headerStartScale,
-      opacity: 0,
-    });
-
-    const aboutTargetScale = hRect.height / aRect.height;
-    const aboutTargetX = hRefX - aRefX;
-    const aboutTargetY = hRefY - aRefY;
-
-    const reveals = aboutPanel.querySelectorAll('.about-reveal');
-    gsap.to(reveals, { opacity: 0, y: -15, duration: 0.4, ease: 'power2.in' });
-    // Reverse wipe: frame rises out the top while the photo holds still
-    gsap.to(photoWrap, { yPercent: -100, duration: 0.6, ease: 'power2.in' });
-    gsap.to(photo, { yPercent: 100, scale: 1.1, duration: 0.6, ease: 'power2.in' });
+    gsap.set(headerName, { ...morph(hRect, aRect), opacity: 0 });
+    gsap.set(photoWrap, { willChange: 'transform' });
 
     const closeDuration = isMobile ? 0.55 : 1.2;
     const closeEase = isMobile ? 'power3.out' : 'expo.inOut';
 
-    gsap.to(aboutName, {
-      x: aboutTargetX,
-      y: aboutTargetY,
-      scale: aboutTargetScale,
-      opacity: 0,
-      duration: closeDuration,
-      ease: closeEase,
-    });
+    aboutTl = gsap.timeline({ onComplete: settleClosed, onReverseComplete: settleOpen });
+    aboutTl
+      .to(reveals, { opacity: 0, y: -15, duration: 0.4, ease: 'power2.in' }, 0)
+      // Reverse wipe: frame rises out the top while the photo holds still
+      .to(photoWrap, { yPercent: -100, duration: 0.6, ease: 'power2.in' }, 0)
+      .to(photo, { yPercent: 100, scale: 1.1, duration: 0.6, ease: 'power2.in' }, 0)
+      .to(aboutName, { ...morph(aRect, hRect), opacity: 0, duration: closeDuration, ease: closeEase }, 0)
+      .to(headerName, { x: 0, y: 0, scale: 1, opacity: 1, duration: closeDuration, ease: closeEase }, 0)
+      .to(backdrop, { opacity: 0, duration: isMobile ? 0.45 : 0.8, ease: 'power2.inOut' }, 0);
 
-    gsap.to(headerName, {
-      x: 0,
-      y: 0,
-      scale: 1,
-      opacity: 1,
-      duration: closeDuration,
-      ease: closeEase,
-      onComplete: () => {
-        gsap.set(headerName, { clearProps: 'transform,opacity,visibility,willChange' });
-        aboutPanel.style.transition = 'none';
-        aboutPanel.classList.remove('is-open');
-        if (aboutCard) {
-          gsap.set(aboutCard, { clearProps: 'opacity,scale,y' });
-          aboutCard.removeAttribute('data-active-brand');
-        }
-        if (cardFlipper) cardFlipper.classList.remove('is-flipped');
-        setPhotoHover(false);
-        gsap.set(aboutName, { opacity: 0, clearProps: 'x,y,scale,transformOrigin,willChange' });
-        gsap.set(photo, { clearProps: 'transform' });
-        gsap.set(photoWrap, { clearProps: 'transform,willChange' });
-        gsap.set(reveals, { opacity: 0, y: 25 });
-        const backdrop = aboutPanel.querySelector('.about-panel__backdrop');
-        gsap.set(backdrop, { clearProps: 'opacity' });
-        requestAnimationFrame(() => {
-          aboutPanel.style.removeProperty('transition');
-        });
-      },
-    });
-
-    const backdrop = aboutPanel.querySelector('.about-panel__backdrop');
-    const backdropDuration = isMobile ? 0.45 : 0.8;
-    gsap.to(backdrop, { opacity: 0, duration: backdropDuration, ease: 'power2.inOut' });
+    if (isMobile && aboutCard) {
+      aboutTl.to(aboutCard, { opacity: 0, scale: 0.92, y: 40, duration: 0.45, ease: 'power2.in' }, 0);
+    }
   }
 
   openAboutFn = openAbout;
   closeAboutFn = closeAbout;
 
-  // Browser back / forward / hash links
-  window.addEventListener('hashchange', onBrowserRouteChange);
+  // Browser back / forward / hash links. popstate alone: it fires for every
+  // hash navigation too, and also listening to hashchange ran each route twice.
   window.addEventListener('popstate', onBrowserRouteChange);
 
   aboutClose.addEventListener('click', (e) => {
