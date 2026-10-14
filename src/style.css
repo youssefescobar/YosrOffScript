@@ -1303,6 +1303,7 @@ img, video { display: block; max-width: 100%; }
   .about-panel__photo {
     height: 100%;
     aspect-ratio: auto;
+    object-position: center 70%; /* show more of the figure, not just the head */
   }
 
   .about-panel__content {
@@ -1315,12 +1316,11 @@ img, video { display: block; max-width: 100%; }
   }
 
   .about-panel__name {
-    font-size: clamp(2.6rem, 5.6vw, 7rem);
+    font-size: clamp(2rem, 3.4vw, 4.25rem);
     line-height: 0.95;
     letter-spacing: -0.03em;
     white-space: nowrap;
-    margin-left: -10vw;
-    margin-bottom: 18px;
+    margin-bottom: 14px;
     align-self: flex-start;
   }
 
