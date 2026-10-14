@@ -1198,6 +1198,8 @@ function openVideoDetail(video, { fromRoute = false } = {}) {
           poster="${escapeAttr(video.poster)}"
           style="aspect-ratio: ${video.aspect}"
           controls
+          controlslist="nodownload"
+          oncontextmenu="return false"
           playsinline
           autoplay
           preload="metadata"

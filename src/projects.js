@@ -27,11 +27,11 @@ function media(slug) {
 }
 
 const ALL_CATEGORIES = [
-  { id: 'fashion', label: 'Fashion & Apparel', coverFrom: 'fashion-sakina' },
-  { id: 'bts', label: 'Behind The Scenes', coverFrom: 'bts-lail-fashion' },
-  { id: 'events', label: 'Events', coverFrom: 'events-salata' },
-  { id: 'fnb', label: 'F&B', coverFrom: null },
-  { id: 'film', label: 'Film', coverFrom: 'film-the-hungary-experience' },
+  { id: 'fashion', label: 'Fashion & Apparel', cover: '/covers/fashion.webp' },
+  { id: 'bts', label: 'Behind The Scenes', cover: '/covers/bts.webp' },
+  { id: 'events', label: 'Events', cover: '/covers/events.webp' },
+  { id: 'fnb', label: 'F&B' },
+  { id: 'film', label: 'Film', cover: '/covers/film.webp' },
 ];
 
 // Fill descriptions / brands as you like. Empty description hides the line.
@@ -76,7 +76,7 @@ export const VIDEOS = ENTRIES.map((e, i) => ({
 export const CATEGORIES = ALL_CATEGORIES.filter((c) =>
   VIDEOS.some((v) => v.category === c.id)
 ).map((c) => {
-  const cover = c.coverFrom ? media(c.coverFrom).poster : VIDEOS.find((v) => v.category === c.id).poster;
+  const cover = c.cover ?? VIDEOS.find((v) => v.category === c.id).poster;
   return { id: c.id, label: c.label, cover };
 });
 

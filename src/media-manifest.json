@@ -335,8 +335,9 @@
       "mtimeMs": 1790562134000
     },
     "posterAt": null,
+    "crf": 18,
     "files": {
-      "video": "film-the-hungary-experience.327c075b.mp4",
+      "video": "film-the-hungary-experience.3db0fe2e.mp4",
       "preview": "film-the-hungary-experience-preview.69e87275.mp4",
       "poster": "film-the-hungary-experience.c01516de.webp"
     }

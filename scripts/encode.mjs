@@ -25,7 +25,7 @@ const OUT_DIR = path.join(ROOT, 'media-out');
 const MANIFEST = path.join(ROOT, 'src', 'media-manifest.json');
 const OVERRIDES = path.join(ROOT, 'scripts', 'poster-overrides.json');
 
-const DEFAULT_SRC = 'C:\\Users\\usef\\Desktop\\Portfolio Projects';
+const DEFAULT_SRC = 'C:\\Users\\usef\\Desktop\\npc\\Portfolio Projects';
 
 // source folder name -> category id used in src/projects.js
 const FOLDER_TO_CATEGORY = {
@@ -123,13 +123,21 @@ function filters(info, shortEdge) {
   return f.join(',');
 }
 
-function encodeFull(src, info, outTmp) {
+// Full-video quality per category. Films are the hero pieces, so they get
+// far more bits than the short social clips.
+const FULL_QUALITY = {
+  default: { crf: 26, maxrate: '4M', bufsize: '8M', preset: 'medium' },
+  film: { crf: 18, maxrate: '12M', bufsize: '24M', preset: 'slow' },
+};
+const qualityFor = (category) => FULL_QUALITY[category] ?? FULL_QUALITY.default;
+
+function encodeFull(src, info, outTmp, q) {
   run('ffmpeg', [
     '-y', '-v', 'error',
     '-i', src,
     '-map', '0:v:0', '-map', '0:a:0?',
     '-vf', filters(info, 1080),
-    '-c:v', 'libx264', '-preset', 'medium', '-profile:v', 'high', '-crf', '26', '-maxrate', '4M', '-bufsize', '8M',
+    '-c:v', 'libx264', '-preset', q.preset, '-profile:v', 'high', '-crf', String(q.crf), '-maxrate', q.maxrate, '-bufsize', q.bufsize,
     '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709',
     '-c:a', 'aac', '-b:a', '128k',
     '-movflags', '+faststart',
@@ -213,8 +221,10 @@ function main() {
     const filesExist =
       old && Object.values(old.files).every((n) => fs.existsSync(path.join(OUT_DIR, n)));
     const posterSame = old && old.posterAt === (overrides[s.slug] ?? null);
+    const q = qualityFor(s.category);
+    const qualitySame = old && (old.crf ?? FULL_QUALITY.default.crf) === q.crf;
 
-    if (!force && sameSource && filesExist && posterSame) {
+    if (!force && sameSource && filesExist && posterSame && qualitySame) {
       console.log(`= ${s.slug} (unchanged)`);
       manifest[s.slug] = old;
       continue;
@@ -224,7 +234,7 @@ function main() {
     const info = probe(s.file);
     const tmp = (suffix) => path.join(OUT_DIR, `.tmp-${s.slug}${suffix}`);
 
-    encodeFull(s.file, info, tmp('.mp4'));
+    encodeFull(s.file, info, tmp('.mp4'), q);
     const video = finalize(tmp('.mp4'), s.slug, '.mp4');
 
     encodePreview(s.file, info, tmp('-p.mp4'));
@@ -248,6 +258,7 @@ function main() {
       aspect: Math.round((info.width / info.height) * 1000) / 1000,
       source: { size: s.size, mtimeMs: s.mtimeMs },
       posterAt: overrides[s.slug] ?? null,
+      crf: q.crf,
       files: { video, preview, poster },
     };
   }
