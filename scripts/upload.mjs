@@ -32,11 +32,18 @@ for (const name of files) {
   const r = spawnSync(
     'npx',
     [
-      'wrangler', 'r2', 'object', 'put', `${BUCKET}/${name}`,
-      '--file', file,
-      '--content-type', TYPES[path.extname(name)],
+      'wrangler',
+      'r2',
+      'object',
+      'put',
+      `${BUCKET}/${name}`,
+      '--file',
+      file,
+      '--content-type',
+      TYPES[path.extname(name)],
       // quoted: shell:true would otherwise split on the spaces
-      '--cache-control', '"public, max-age=31536000, immutable"',
+      '--cache-control',
+      '"public, max-age=31536000, immutable"',
       '--remote',
     ],
     { encoding: 'utf8', shell: true }
@@ -50,5 +57,7 @@ for (const name of files) {
   }
 }
 
-console.log(failed ? `\n${failed} file(s) failed` : `\nuploaded ${files.length} files to ${BUCKET}`);
+console.log(
+  failed ? `\n${failed} file(s) failed` : `\nuploaded ${files.length} files to ${BUCKET}`
+);
 process.exit(failed ? 1 : 0);
