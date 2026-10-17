@@ -303,9 +303,7 @@ function startIdleLoop(card, videoEl) {
   } catch (_) {}
   const playPromise = videoEl.play();
   if (playPromise && typeof playPromise.catch === 'function') {
-    playPromise
-      .then(() => card.classList.add('is-playing'))
-      .catch(() => {});
+    playPromise.then(() => card.classList.add('is-playing')).catch(() => {});
   } else {
     card.classList.add('is-playing');
   }

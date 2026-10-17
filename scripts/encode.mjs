@@ -56,15 +56,19 @@ function run(cmd, cmdArgs) {
   const r = spawnSync(bin(cmd), cmdArgs, { encoding: 'utf8', maxBuffer: 1 << 28 });
   if (r.error) throw new Error(`${cmd} failed to start: ${r.error.message}`);
   if (r.status !== 0) {
-    throw new Error(`${cmd} exited ${r.status}\n${(r.stderr || '').split('\n').slice(-12).join('\n')}`);
+    throw new Error(
+      `${cmd} exited ${r.status}\n${(r.stderr || '').split('\n').slice(-12).join('\n')}`
+    );
   }
   return r.stdout;
 }
 
 function probe(file) {
   const out = run('ffprobe', [
-    '-v', 'error',
-    '-print_format', 'json',
+    '-v',
+    'error',
+    '-print_format',
+    'json',
     '-show_streams',
     '-show_format',
     file,
@@ -74,7 +78,8 @@ function probe(file) {
   if (!v) throw new Error(`no video stream in ${file}`);
   const [num, den] = (v.avg_frame_rate || v.r_frame_rate || '30/1').split('/').map(Number);
   // honour display rotation (iPhone clips may be stored rotated)
-  const rot = Math.abs(Number(v.side_data_list?.find((d) => d.rotation !== undefined)?.rotation || 0)) % 180;
+  const rot =
+    Math.abs(Number(v.side_data_list?.find((d) => d.rotation !== undefined)?.rotation || 0)) % 180;
   const width = rot === 90 ? v.height : v.width;
   const height = rot === 90 ? v.width : v.height;
   return {
@@ -136,14 +141,41 @@ const qualityFor = (category) => FULL_QUALITY[category] ?? FULL_QUALITY.default;
 
 function encodeFull(src, info, outTmp, q) {
   run('ffmpeg', [
-    '-y', '-v', 'error',
-    '-i', src,
-    '-map', '0:v:0', '-map', '0:a:0?',
-    '-vf', filters(info, 1080),
-    '-c:v', 'libx264', '-preset', q.preset, '-profile:v', 'high', '-crf', String(q.crf), '-maxrate', q.maxrate, '-bufsize', q.bufsize,
-    '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709',
-    '-c:a', 'aac', '-b:a', '128k',
-    '-movflags', '+faststart',
+    '-y',
+    '-v',
+    'error',
+    '-i',
+    src,
+    '-map',
+    '0:v:0',
+    '-map',
+    '0:a:0?',
+    '-vf',
+    filters(info, 1080),
+    '-c:v',
+    'libx264',
+    '-preset',
+    q.preset,
+    '-profile:v',
+    'high',
+    '-crf',
+    String(q.crf),
+    '-maxrate',
+    q.maxrate,
+    '-bufsize',
+    q.bufsize,
+    '-colorspace',
+    'bt709',
+    '-color_primaries',
+    'bt709',
+    '-color_trc',
+    'bt709',
+    '-c:a',
+    'aac',
+    '-b:a',
+    '128k',
+    '-movflags',
+    '+faststart',
     outTmp,
   ]);
 }
@@ -152,15 +184,36 @@ function encodePreview(src, info, outTmp) {
   const len = 4;
   const start = info.duration > len + 1 ? Math.max(0, info.duration * 0.2) : 0;
   run('ffmpeg', [
-    '-y', '-v', 'error',
-    '-ss', start.toFixed(2),
-    '-i', src,
-    '-t', String(len),
-    '-map', '0:v:0', '-an',
-    '-vf', filters(info, 540),
-    '-c:v', 'libx264', '-preset', 'slow', '-profile:v', 'main', '-crf', '27',
-    '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709',
-    '-movflags', '+faststart',
+    '-y',
+    '-v',
+    'error',
+    '-ss',
+    start.toFixed(2),
+    '-i',
+    src,
+    '-t',
+    String(len),
+    '-map',
+    '0:v:0',
+    '-an',
+    '-vf',
+    filters(info, 540),
+    '-c:v',
+    'libx264',
+    '-preset',
+    'slow',
+    '-profile:v',
+    'main',
+    '-crf',
+    '27',
+    '-colorspace',
+    'bt709',
+    '-color_primaries',
+    'bt709',
+    '-color_trc',
+    'bt709',
+    '-movflags',
+    '+faststart',
     outTmp,
   ]);
 }
@@ -168,12 +221,21 @@ function encodePreview(src, info, outTmp) {
 function encodePoster(src, info, outTmp, at) {
   const t = at ?? info.duration / 2;
   run('ffmpeg', [
-    '-y', '-v', 'error',
-    '-ss', t.toFixed(2),
-    '-i', src,
-    '-frames:v', '1',
-    '-vf', filters(info, 720),
-    '-c:v', 'libwebp', '-quality', '82',
+    '-y',
+    '-v',
+    'error',
+    '-ss',
+    t.toFixed(2),
+    '-i',
+    src,
+    '-frames:v',
+    '1',
+    '-vf',
+    filters(info, 720),
+    '-c:v',
+    'libwebp',
+    '-quality',
+    '82',
     outTmp,
   ]);
 }
@@ -274,7 +336,9 @@ function main() {
 
   fs.writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2) + '\n');
   const total = [...keep].reduce((n, f) => n + fs.statSync(path.join(OUT_DIR, f)).size, 0);
-  console.log(`\n${Object.keys(manifest).length} videos, ${(total / 1048576).toFixed(0)} MB in media-out/`);
+  console.log(
+    `\n${Object.keys(manifest).length} videos, ${(total / 1048576).toFixed(0)} MB in media-out/`
+  );
 }
 
 main();

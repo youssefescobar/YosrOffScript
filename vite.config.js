@@ -60,7 +60,10 @@ function prerenderPages() {
       const template = fs.readFileSync(path.join(outDir, 'index.html'), 'utf8');
 
       const esc = (v) =>
-        String(v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+        String(v).replace(
+          /[&<>"]/g,
+          (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]
+        );
       const setTag = (html, re, value) => {
         if (!re.test(html)) throw new Error(`prerender: no match for ${re}`);
         return html.replace(re, `$1${esc(value)}$2`);
@@ -81,7 +84,10 @@ function prerenderPages() {
         }
         if (jsonLd) {
           const ld = JSON.stringify(jsonLd).replace(/</g, '\\u003c');
-          html = html.replace('</head>', `  <script type="application/ld+json">${ld}</script>\n  </head>`);
+          html = html.replace(
+            '</head>',
+            `  <script type="application/ld+json">${ld}</script>\n  </head>`
+          );
         }
         const dest = path.join(outDir, `${file}.html`);
         fs.mkdirSync(path.dirname(dest), { recursive: true });
@@ -113,7 +119,8 @@ function prerenderPages() {
       for (const v of VIDEOS) {
         const label = getCategory(v.category).label;
         const description =
-          v.description || `${v.title}${v.brand ? ` for ${v.brand}` : ''} — ${label} film by ${SITE_NAME}.`;
+          v.description ||
+          `${v.title}${v.brand ? ` for ${v.brand}` : ''} — ${label} film by ${SITE_NAME}.`;
         const url = `${SITE_URL}${v.path}`;
         page({
           file: v.path.slice(1),
@@ -132,12 +139,22 @@ function prerenderPages() {
             uploadDate: v.uploadDate,
             duration: `PT${Math.round(v.duration)}S`,
             url,
-            creator: { '@type': 'Person', name: 'Yosr', alternateName: SITE_NAME, url: `${SITE_URL}/` },
+            creator: {
+              '@type': 'Person',
+              name: 'Yosr',
+              alternateName: SITE_NAME,
+              url: `${SITE_URL}/`,
+            },
           },
         });
       }
 
-      const urls = ['/', '/about', ...CATEGORIES.map((c) => `/${c.id}`), ...VIDEOS.map((v) => v.path)];
+      const urls = [
+        '/',
+        '/about',
+        ...CATEGORIES.map((c) => `/${c.id}`),
+        ...VIDEOS.map((v) => v.path),
+      ];
       fs.writeFileSync(
         path.join(outDir, 'sitemap.xml'),
         `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls

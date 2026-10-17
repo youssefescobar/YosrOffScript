@@ -163,7 +163,6 @@ export function initAbout() {
     }
     aboutState = 'opening';
 
-
     const aboutName = getAboutTarget();
     const hRect = headerName.getBoundingClientRect();
 
@@ -194,8 +193,16 @@ export function initAbout() {
     aboutTl = gsap.timeline({ onComplete: settleOpen, onReverseComplete: settleClosed });
     aboutTl
       .to(aboutPanel, { opacity: 1, duration: 0.6, ease: 'expo.out' }, 0)
-      .to(aboutName, { x: 0, y: 0, scale: 1, opacity: 1, duration: openDuration, ease: 'expo.inOut' }, 0)
-      .to(headerName, { ...morph(hRect, aRect), opacity: 0, duration: openDuration, ease: 'expo.inOut' }, 0)
+      .to(
+        aboutName,
+        { x: 0, y: 0, scale: 1, opacity: 1, duration: openDuration, ease: 'expo.inOut' },
+        0
+      )
+      .to(
+        headerName,
+        { ...morph(hRect, aRect), opacity: 0, duration: openDuration, ease: 'expo.inOut' },
+        0
+      )
       .to(photoWrap, { yPercent: 0, duration: 1.4, ease: 'expo.inOut' }, 0.1)
       .to(photo, { yPercent: 0, scale: 1, duration: 1.4, ease: 'expo.inOut' }, 0.1)
       .to(reveals, { opacity: 1, y: 0, duration: 1, stagger: 0.1, ease: 'expo.out' }, 0.4);
@@ -229,7 +236,10 @@ export function initAbout() {
     gsap.set(headerName, { opacity: 1, visibility: 'visible' });
     const hRect = headerName.getBoundingClientRect();
 
-    gsap.set([headerName, aboutName], { transformOrigin: '0% 50%', willChange: 'transform, opacity' });
+    gsap.set([headerName, aboutName], {
+      transformOrigin: '0% 50%',
+      willChange: 'transform, opacity',
+    });
     gsap.set(headerName, { ...morph(hRect, aRect), opacity: 0 });
     gsap.set(photoWrap, { willChange: 'transform' });
 
@@ -242,12 +252,24 @@ export function initAbout() {
       // Reverse wipe: frame rises out the top while the photo holds still
       .to(photoWrap, { yPercent: -100, duration: 0.6, ease: 'power2.in' }, 0)
       .to(photo, { yPercent: 100, scale: 1.1, duration: 0.6, ease: 'power2.in' }, 0)
-      .to(aboutName, { ...morph(aRect, hRect), opacity: 0, duration: closeDuration, ease: closeEase }, 0)
-      .to(headerName, { x: 0, y: 0, scale: 1, opacity: 1, duration: closeDuration, ease: closeEase }, 0)
+      .to(
+        aboutName,
+        { ...morph(aRect, hRect), opacity: 0, duration: closeDuration, ease: closeEase },
+        0
+      )
+      .to(
+        headerName,
+        { x: 0, y: 0, scale: 1, opacity: 1, duration: closeDuration, ease: closeEase },
+        0
+      )
       .to(backdrop, { opacity: 0, duration: isMobile ? 0.45 : 0.8, ease: 'power2.inOut' }, 0);
 
     if (isMobile && aboutCard) {
-      aboutTl.to(aboutCard, { opacity: 0, scale: 0.92, y: 40, duration: 0.45, ease: 'power2.in' }, 0);
+      aboutTl.to(
+        aboutCard,
+        { opacity: 0, scale: 0.92, y: 40, duration: 0.45, ease: 'power2.in' },
+        0
+      );
     }
   }
 

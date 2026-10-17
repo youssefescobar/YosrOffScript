@@ -12,7 +12,14 @@ import {
   routing,
   categoryCards,
 } from './state.js';
-import { paths, parseRoute, navigate, goBackTo, endTransition, requestCloseDetail } from './router.js';
+import {
+  paths,
+  parseRoute,
+  navigate,
+  goBackTo,
+  endTransition,
+  requestCloseDetail,
+} from './router.js';
 import { populateVideoGrid, fitVideoGrid, stopAllPreviews } from './grid.js';
 import { closeVideoDetail } from './detail.js';
 
@@ -445,11 +452,7 @@ function openVideoView(categoryId, focusCard) {
     },
     focusCard ? '-=0.25' : 0
   )
-    .to(
-      videoView,
-      { opacity: 1, duration: 0.4, ease: 'power2.out' },
-      '-=0.1'
-    )
+    .to(videoView, { opacity: 1, duration: 0.4, ease: 'power2.out' }, '-=0.1')
     .to(
       cards,
       {

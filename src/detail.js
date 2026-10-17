@@ -39,8 +39,7 @@ export function openVideoDetail(video, { fromRoute = false } = {}) {
   viewState.activeCategory = video.category;
   viewState.transitioning = true;
 
-  const sourceCard =
-    routing.intent.sourceCard || findVideoCard(video.id);
+  const sourceCard = routing.intent.sourceCard || findVideoCard(video.id);
   routing.intent.sourceCard = null;
   const sourceRect = sourceCard ? sourceCard.getBoundingClientRect() : null;
 
@@ -90,9 +89,7 @@ export function openVideoDetail(video, { fromRoute = false } = {}) {
   const playerSlot = document.getElementById('detail-player-slot');
   const playerWrap = document.getElementById('detail-player');
   const metaEl = document.getElementById('detail-meta');
-  const metaItems = metaEl
-    ? Array.from(metaEl.querySelectorAll('.project-panel__meta-item'))
-    : [];
+  const metaItems = metaEl ? Array.from(metaEl.querySelectorAll('.project-panel__meta-item')) : [];
   viewState.detailVideoEl = detailVideo;
 
   const fsBtn = document.getElementById('detail-fullscreen');
@@ -185,11 +182,7 @@ export function openVideoDetail(video, { fromRoute = false } = {}) {
     onComplete: finishOpen,
   });
 
-  tl.to(
-    projectPanel,
-    { opacity: 1, duration: 0.45, ease: 'power2.out' },
-    0
-  );
+  tl.to(projectPanel, { opacity: 1, duration: 0.45, ease: 'power2.out' }, 0);
 
   // Bring card forward
   tl.to(
@@ -275,11 +268,8 @@ export function closeVideoDetail({ animate = true, fromRoute = false } = {}) {
     document.getElementById('detail-player') ||
     projectInner.querySelector('.project-panel__player-wrap');
   const metaEl =
-    document.getElementById('detail-meta') ||
-    projectInner.querySelector('.project-panel__meta');
-  const metaItems = metaEl
-    ? Array.from(metaEl.querySelectorAll('.project-panel__meta-item'))
-    : [];
+    document.getElementById('detail-meta') || projectInner.querySelector('.project-panel__meta');
+  const metaItems = metaEl ? Array.from(metaEl.querySelectorAll('.project-panel__meta-item')) : [];
 
   if (viewState.detailVideoEl) {
     viewState.detailVideoEl.pause();
@@ -368,11 +358,7 @@ export function closeVideoDetail({ animate = true, fromRoute = false } = {}) {
       0.18
     );
 
-    tl.to(
-      projectPanel,
-      { opacity: 0, duration: 0.4, ease: 'power2.in' },
-      0.45
-    );
+    tl.to(projectPanel, { opacity: 0, duration: 0.4, ease: 'power2.in' }, 0.45);
 
     return;
   }

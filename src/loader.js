@@ -36,9 +36,7 @@ function loadImageAsset(src) {
 }
 
 export function preloadAssets() {
-  const aboutPhotoSrcs = Array.from(
-    document.querySelectorAll('.about-panel__photo')
-  )
+  const aboutPhotoSrcs = Array.from(document.querySelectorAll('.about-panel__photo'))
     .map((img) => img.getAttribute('src'))
     .filter(Boolean);
 
@@ -82,10 +80,7 @@ export function preloadAssets() {
   let unlocked = false;
 
   function computeTarget() {
-    return Math.min(
-      100,
-      (state.images * weights.images + state.fonts * weights.fonts) * 100
-    );
+    return Math.min(100, (state.images * weights.images + state.fonts * weights.fonts) * 100);
   }
 
   function paintProgress() {
@@ -240,7 +235,10 @@ function playLoader() {
 
     // Own GPU layers while they fly, so the scale tweens don't repaint the
     // full-screen loader and header every frame.
-    gsap.set([loaderText, headerName], { transformOrigin: '0% 50%', willChange: 'transform, opacity' });
+    gsap.set([loaderText, headerName], {
+      transformOrigin: '0% 50%',
+      willChange: 'transform, opacity',
+    });
 
     const lRefX = lRect.left;
     const lRefY = lRect.top + lRect.height / 2;

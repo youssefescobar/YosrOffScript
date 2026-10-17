@@ -19,7 +19,8 @@ export const MEDIA_BASE =
 
 function media(slug) {
   const m = manifest[slug];
-  if (!m) throw new Error(`projects.js: no media-manifest entry for "${slug}" — run scripts/encode.mjs`);
+  if (!m)
+    throw new Error(`projects.js: no media-manifest entry for "${slug}" — run scripts/encode.mjs`);
   return {
     src: MEDIA_BASE + m.files.video,
     preview: MEDIA_BASE + m.files.preview,
@@ -27,7 +28,9 @@ function media(slug) {
     aspect: m.aspect,
     duration: m.duration,
     // Schema.org needs an upload date; the source file's date is the closest we have
-    uploadDate: m.source?.mtimeMs ? new Date(m.source.mtimeMs).toISOString().slice(0, 10) : undefined,
+    uploadDate: m.source?.mtimeMs
+      ? new Date(m.source.mtimeMs).toISOString().slice(0, 10)
+      : undefined,
   };
 }
 
@@ -43,25 +46,54 @@ const ENTRIES = [
   // Fashion
   { slug: 'fashion-casa-lila', category: 'fashion', title: 'Casa Lila' },
   { slug: 'fashion-worood', category: 'fashion', title: 'Worood' },
-  { slug: 'fashion-shakti-the-brand-l', category: 'fashion', title: 'Shakti the Brand I', brand: 'Shakti' },
-  { slug: 'fashion-shakti-the-brand-ll', category: 'fashion', title: 'Shakti the Brand II', brand: 'Shakti' },
-  { slug: 'fashion-shakti-the-brand-lll', category: 'fashion', title: 'Shakti the Brand III', brand: 'Shakti' },
+  {
+    slug: 'fashion-shakti-the-brand-l',
+    category: 'fashion',
+    title: 'Shakti the Brand I',
+    brand: 'Shakti',
+  },
+  {
+    slug: 'fashion-shakti-the-brand-ll',
+    category: 'fashion',
+    title: 'Shakti the Brand II',
+    brand: 'Shakti',
+  },
+  {
+    slug: 'fashion-shakti-the-brand-lll',
+    category: 'fashion',
+    title: 'Shakti the Brand III',
+    brand: 'Shakti',
+  },
   { slug: 'fashion-l', category: 'fashion', title: 'I' },
   { slug: 'fashion-ll', category: 'fashion', title: 'II' },
   { slug: 'fashion-sakina', category: 'fashion', title: 'Sakina' },
 
   // BTS
-  { slug: 'bts-atm-production-in-your-shoe', category: 'bts', title: 'In Your Shoe', brand: 'ATM Production' },
+  {
+    slug: 'bts-atm-production-in-your-shoe',
+    category: 'bts',
+    title: 'In Your Shoe',
+    brand: 'ATM Production',
+  },
   { slug: 'bts-jjs-designs', category: 'bts', title: 'JJ’s Designs' },
   { slug: 'bts-bossa-nova', category: 'bts', title: 'Bossa Nova' },
   { slug: 'bts-lail-fashion', category: 'bts', title: 'Lail Fashion' },
-  { slug: 'bts-atm-production-heddy-rassekh', category: 'bts', title: 'Heddy Rassekh', brand: 'ATM Production' },
+  {
+    slug: 'bts-atm-production-heddy-rassekh',
+    category: 'bts',
+    title: 'Heddy Rassekh',
+    brand: 'ATM Production',
+  },
   { slug: 'bts-atm-production-roaia', category: 'bts', title: 'Roaia', brand: 'ATM Production' },
 
   // Events
   { slug: 'events-outing-worood', category: 'events', title: 'Outing', brand: 'Worood' },
   { slug: 'events-edu-gate-must', category: 'events', title: 'EDU Gate', brand: 'MUST' },
-  { slug: 'events-knowledge-valley-schools', category: 'events', title: 'Knowledge Valley Schools' },
+  {
+    slug: 'events-knowledge-valley-schools',
+    category: 'events',
+    title: 'Knowledge Valley Schools',
+  },
   { slug: 'events-salata', category: 'events', title: 'Salata' },
 
   // Film
@@ -85,12 +117,12 @@ export const VIDEOS = ENTRIES.map((e) => ({
 }));
 
 // Categories with no videos are hidden everywhere (cards + footer filters).
-export const CATEGORIES = ALL_CATEGORIES.filter((c) =>
-  VIDEOS.some((v) => v.category === c.id)
-).map((c) => {
-  const cover = c.cover ?? VIDEOS.find((v) => v.category === c.id).poster;
-  return { id: c.id, label: c.label, cover };
-});
+export const CATEGORIES = ALL_CATEGORIES.filter((c) => VIDEOS.some((v) => v.category === c.id)).map(
+  (c) => {
+    const cover = c.cover ?? VIDEOS.find((v) => v.category === c.id).poster;
+    return { id: c.id, label: c.label, cover };
+  }
+);
 
 export function getVideosByCategory(categoryId) {
   return VIDEOS.filter((v) => v.category === categoryId);
