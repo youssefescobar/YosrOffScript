@@ -1,0 +1,7 @@
+dist/
+media-out/
+node_modules/
+package-lock.json
+src/media-manifest.json
+# Hand-laid markup with inline SVGs — keep its formatting as written
+index.html
