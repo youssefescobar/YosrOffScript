@@ -8,7 +8,7 @@
   --color-accent: #c8b8a8;
   --color-surface: rgba(17, 17, 17, 0.75);
 
-  --font-main: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-main: 'Inter Variable', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;
@@ -799,15 +799,6 @@ img, video { display: block; max-width: 100%; }
   will-change: opacity, background;
 }
 
-.about-card__flipper,
-.about-card__front { width: 100%; }
-
-.about-card__front-info,
-.about-card__back,
-.about-card__overlay { display: none; }
-
-.about-desktop-content { display: block; }
-
 .about-panel__photo-wrap {
   width: 280px;
   overflow: hidden;
@@ -1011,12 +1002,6 @@ img, video { display: block; max-width: 100%; }
   --card-aura-bg: radial-gradient(circle at 50% 65%, rgba(225, 48, 108, 0.65) 0%, rgba(240, 148, 51, 0.4) 45%, rgba(188, 24, 136, 0.2) 70%, transparent 85%);
   --card-hue-glow: 0 0 55px rgba(225, 48, 108, 0.45), 0 0 25px rgba(240, 148, 51, 0.3);
   --card-hue-border: rgba(225, 48, 108, 0.65);
-}
-
-.about-card[data-active-brand="instagram"] .about-card__flip-dot,
-.about-card:has(.about-panel__social[data-brand="instagram"]:hover) .about-card__flip-dot {
-  background: #E1306C;
-  box-shadow: 0 0 10px #E1306C;
 }
 
 .about-reveal {
@@ -1264,8 +1249,6 @@ img, video { display: block; max-width: 100%; }
     display: none;
   }
 
-  .about-card__flipper,
-  .about-card__front,
   .about-panel__photo-wrap {
     height: 100%;
   }
@@ -1464,12 +1447,6 @@ img, video { display: block; max-width: 100%; }
   /* ===================================================
      ABOUT — mobile editorial (full-bleed portrait + story)
      =================================================== */
-  .about-desktop-content { display: block !important; }
-
-  .about-card__front-info,
-  .about-card__back,
-  .about-card__overlay { display: none !important; }
-
   .about-panel {
     align-items: stretch;
     justify-content: flex-start;
@@ -1507,11 +1484,6 @@ img, video { display: block; max-width: 100%; }
 
   .about-card__aura {
     display: none;
-  }
-
-  .about-card__flipper {
-    transform: none !important;
-    transition: none;
   }
 
   .about-panel__photo-wrap {

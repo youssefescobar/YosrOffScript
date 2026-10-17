@@ -4,18 +4,39 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     
-    <!-- Meta tags for sharing (WhatsApp, iMessage, etc.) -->
+    <meta name="description" content="Yosr (YOSROFFSCRIPT) — visual storyteller and creative director between Egypt &amp; Saudi Arabia. Fashion, events, behind-the-scenes and film." />
+    <meta name="theme-color" content="#000000" />
+    <link rel="canonical" href="https://yosroffscript.me/" />
+
+    <!-- Meta tags for sharing (WhatsApp, iMessage, etc.). Film and category
+         pages get their own copies at build time (see vite.config.js). -->
+    <meta property="og:site_name" content="YOSROFFSCRIPT" />
     <meta property="og:title" content="YOSROFFSCRIPT" />
     <meta property="og:description" content="Visual Storyteller" />
     <meta property="og:image" content="https://yosroffscript.me/preview.png" />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
     <meta property="og:url" content="https://yosroffscript.me/" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="https://yosroffscript.me/preview.png" />
-    
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": "Yosr",
+        "alternateName": "YOSROFFSCRIPT",
+        "jobTitle": "Visual Storyteller",
+        "description": "Creative director focused on branding, editorial design, and visual storytelling.",
+        "url": "https://yosroffscript.me/",
+        "image": "https://yosroffscript.me/preview.png",
+        "homeLocation": [
+          { "@type": "Country", "name": "Egypt" },
+          { "@type": "Country", "name": "Saudi Arabia" }
+        ],
+        "sameAs": ["https://www.instagram.com/yosroffscript"]
+      }
+    </script>
+
     <!-- Favicon — white Y on black -->
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
@@ -60,8 +81,8 @@
           <span class="header__name">YOSROFFSCRIPT</span>
         </div>
         <nav class="header__nav">
-          <a href="#portfolio" class="header__link active">Portfolio</a>
-          <a href="#about" class="header__link">About</a>
+          <a href="/" class="header__link active">Portfolio</a>
+          <a href="/about" class="header__link">About</a>
         </nav>
       </header>
 
@@ -75,7 +96,6 @@
           <button class="filter-btn" data-filter="fashion" type="button">Fashion &amp; Apparel</button>
           <button class="filter-btn" data-filter="bts" type="button">Behind The Scenes</button>
           <button class="filter-btn" data-filter="events" type="button">Events</button>
-          <button class="filter-btn" data-filter="fnb" type="button">F&amp;B</button>
           <button class="filter-btn" data-filter="film" type="button">Film</button>
         </div>
         <div class="footer__right">
@@ -90,75 +110,17 @@
         </div>
         <div class="about-panel__inner">
 
-          <!-- 3D FLIP CARD (Mobile interactive card / Desktop photo column) -->
           <div class="about-card" id="about-card">
             <div class="about-card__aura" id="about-card-aura"></div>
-            <div class="about-card__flipper" id="about-flipper">
-
-              <!-- CARD FRONT (Mobile visual card / Desktop Left photo) -->
-              <div class="about-card__front" id="about-card-front">
-                <div class="about-panel__photo-wrap about-reveal" tabindex="0" aria-label="Yosr photo">
-                  <div class="about-panel__photo-stack">
-                    <img class="about-panel__photo about-panel__photo--base" src="/yosr.jpeg" alt="Yosr" />
-                    <img class="about-panel__photo about-panel__photo--color" src="/yosr_colorized_2.jpg" alt="" aria-hidden="true" />
-                  </div>
-                  <div class="about-card__overlay"></div>
-                </div>
-
-                <!-- Mobile only front elements (Hidden on Desktop) -->
-                <div class="about-card__front-info">
-                  <div class="about-card__flip-badge" id="about-flip-badge" role="button" aria-label="Flip card">
-                    <span class="about-card__flip-dot"></span>
-                    <span>Story // Flip</span>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
-                  </div>
-
-                  <h2 class="about-panel__name about-name-mobile" id="about-name-mobile">YOSROFFSCRIPT</h2>
-                  <p class="about-panel__role">Visual Storyteller</p>
-                  <p class="about-card__tagline">Digital experiences, visual direction &amp; branding.</p>
-
-                  <div class="about-panel__socials about-card__mobile-socials">
-                    <a href="https://www.instagram.com/yosroffscript" target="_blank" rel="noopener noreferrer" class="about-panel__social" data-brand="instagram" aria-label="Instagram">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none"/></svg>
-                      <span class="about-panel__tooltip">yosroffscript</span>
-                    </a>
-                  </div>
-                </div>
+            <div class="about-panel__photo-wrap about-reveal" tabindex="0" aria-label="Yosr photo">
+              <div class="about-panel__photo-stack">
+                <img class="about-panel__photo about-panel__photo--base" src="/src/assets/yosr.webp" alt="Yosr" />
+                <img class="about-panel__photo about-panel__photo--color" src="/src/assets/yosr-color.webp" alt="" aria-hidden="true" />
               </div>
-
-              <!-- CARD BACK (Mobile full story details) -->
-              <div class="about-card__back" id="about-card-back">
-                <div class="about-card__back-header">
-                  <div class="about-card__back-badge">
-                    <span class="about-card__back-dot"></span>
-                    <span>Story // 01</span>
-                  </div>
-                </div>
-
-                <div class="about-card__back-content">
-                  <h3 class="about-card__back-heading">The Story</h3>
-                  <p class="about-panel__bio">
-                    Creative director focused on branding, editorial design, and visual storytelling. I favor restraint - letting the work breathe and finding beauty in simplicity.
-                  </p>
-                  <p class="about-panel__bio">
-                    Based between Egypt &amp; Saudi Arabia. Open to freelance and collaborations.
-                  </p>
-
-                  <div class="about-card__tags">
-                    <span>Fashion &amp; Apparel</span>
-                    <span>Behind The Scenes</span>
-                    <span>Events</span>
-                    <span>F&amp;B</span>
-                    <span>Film</span>
-                  </div>
-                </div>
-              </div>
-
             </div>
           </div>
 
-          <!-- DESKTOP CONTENT (Right Column on screens > 768px, Hidden on Mobile) -->
-          <div class="about-panel__content about-desktop-content">
+          <div class="about-panel__content">
             <h2 class="about-panel__name" id="about-name">YOSROFFSCRIPT</h2>
             <p class="about-panel__role about-reveal">Visual Storyteller</p>
 

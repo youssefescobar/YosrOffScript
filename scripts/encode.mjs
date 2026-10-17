@@ -1,7 +1,8 @@
 /* ===================================================
    Encode portfolio sources -> web-ready media.
 
-   Usage:  node scripts/encode.mjs [--src "<folder>"] [--force]
+   Usage:  node scripts/encode.mjs --src "<folder>" [--force]
+           (or set PORTFOLIO_SRC instead of passing --src)
 
    For every video found under the source folder (one subfolder per
    category) this writes to media-out/:
@@ -25,8 +26,6 @@ const OUT_DIR = path.join(ROOT, 'media-out');
 const MANIFEST = path.join(ROOT, 'src', 'media-manifest.json');
 const OVERRIDES = path.join(ROOT, 'scripts', 'poster-overrides.json');
 
-const DEFAULT_SRC = 'C:\\Users\\usef\\Desktop\\npc\\Portfolio Projects';
-
 // source folder name -> category id used in src/projects.js
 const FOLDER_TO_CATEGORY = {
   'behind the scenes_': 'bts',
@@ -44,7 +43,11 @@ const VIDEO_EXT = new Set(['.mov', '.mp4', '.m4v']);
 const args = process.argv.slice(2);
 const force = args.includes('--force');
 const srcIdx = args.indexOf('--src');
-const SRC_DIR = srcIdx >= 0 ? args[srcIdx + 1] : DEFAULT_SRC;
+const SRC_DIR = srcIdx >= 0 ? args[srcIdx + 1] : process.env.PORTFOLIO_SRC;
+if (!SRC_DIR) {
+  console.error('Source folder missing: pass --src "<folder>" or set PORTFOLIO_SRC.');
+  process.exit(1);
+}
 
 const binDir = process.env.FFMPEG_DIR;
 const bin = (name) => (binDir ? path.join(binDir, name) : name);
